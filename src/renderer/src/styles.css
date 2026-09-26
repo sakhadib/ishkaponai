@@ -714,15 +714,18 @@ select.field__input {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Thinking ------------------------------------------------------------- */
+/* --- Thought toggle ---------------------------------------------------------
+   Everything about how the answer was reached lives in here: the model's
+   reasoning, the execution cards with their code and output, and any failed
+   attempt. The answer renders below it, clean. */
 
-.thinking {
+.thought {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius);
   background: var(--bg-sunken);
 }
 
-.thinking__summary {
+.thought__summary {
   display: flex;
   gap: 8px;
   align-items: baseline;
@@ -732,40 +735,16 @@ select.field__input {
   list-style: none;
 }
 
-.thinking__summary::-webkit-details-marker {
+.thought__summary::-webkit-details-marker {
   display: none;
 }
 
-.thinking__label {
+.thought__label {
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.thinking__preview {
-  overflow: hidden;
-  color: var(--text-faint);
-  font-size: 0.76rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.thinking__body {
-  max-height: 340px;
-  padding: 0 10px 10px;
-  overflow-y: auto;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  white-space: pre-wrap;
-}
-
-.thinking__text {
-  white-space: pre-wrap;
-}
-
-/* Failed tool attempts, folded out of the transcript. A count on the summary
-   is the only thing visible until the student asks for it, so a model that
-   retries a malformed call does not surface SDK error text at them. */
-.thinking__badge {
+.thought__badge {
   padding: 1px 7px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -775,25 +754,63 @@ select.field__input {
   white-space: nowrap;
 }
 
-.thinking__failures {
+.thought__badge--muted {
+  color: var(--text-faint);
+}
+
+.thought__preview {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thought__body {
+  max-height: 420px;
+  padding: 0 10px 10px;
+  overflow-y: auto;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.thought__text {
+  white-space: pre-wrap;
+}
+
+/* The cards are full-bleed inside the toggle: the toggle already provides the
+   frame, so a second border per card reads as noise. */
+.thought__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.thought__steps .exec-card {
+  border: none;
+  background: var(--bg);
+}
+
+.thought__failures {
   margin-top: 10px;
   white-space: normal;
 }
 
-.thinking__failures-summary {
+.thought__failures-summary {
   color: var(--text-muted);
   font-size: 0.78rem;
   cursor: pointer;
 }
 
-.thinking__failures-list {
+.thought__failures-list {
   margin: 6px 0 0;
   padding-left: 18px;
   color: var(--text-muted);
   font-size: 0.8rem;
 }
 
-.thinking__failure {
+.thought__failure {
   margin: 2px 0;
 }
 

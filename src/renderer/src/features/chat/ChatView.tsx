@@ -19,7 +19,7 @@ import {
   toExecutionSource
 } from '@/features/chat/ExecutionCard'
 import { MessageItem } from '@/features/chat/MessageItem'
-import { ThinkingBlock } from '@/features/chat/ThinkingBlock'
+import { ThoughtBlock } from '@/features/chat/ThoughtBlock'
 import { CopyButton } from '@/components/CopyButton'
 import { Markdown } from '@/lib/markdown'
 import { call, callQuiet } from '@/lib/bridge'
@@ -200,31 +200,36 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
   const messages: Message[] = detail?.messages ?? []
   const isEmpty = messages.length === 0 && !hasDraft && !streamingHere
 
-  const liveParts = useMemo(() => {
+  // Sorted once, then split: the cards go inside the Thought toggle, and the
+  // failures are summarised there rather than rendered as steps.
+  const liveOrdered = useMemo(() => {
     if (!streamingHere) return []
+    return turn.toolCards.slice().sort((a, b) => a.seq - b.seq)
+  }, [streamingHere, turn.toolCards])
 
-    // Same split as the stored transcript: failed attempts are folded into the
-    // thinking block rather than shown as steps, but they keep their position
-    // so a "Step 2" reference from the model still lines up.
-    const ordered = turn.toolCards.slice().sort((a, b) => a.seq - b.seq)
+  const liveCards = useMemo(
+    () => liveOrdered.filter((card) => !isFailedStatus(card.status)),
+    [liveOrdered]
+  )
 
-    return ordered
-      .filter((card) => !isFailedStatus(card.status))
-      .map((card) => (
+  const liveParts = useMemo(
+    () =>
+      liveCards.map((card) => (
         <ExecutionCard
           key={card.toolCallId}
           source={toExecutionSource(card)}
-          index={ordered.indexOf(card)}
+          index={liveOrdered.indexOf(card)}
         />
-      ))
-  }, [streamingHere, turn.toolCards])
+      )),
+    [liveCards, liveOrdered]
+  )
 
   const liveFailures = useMemo(() => {
     if (!streamingHere) return []
-    return turn.toolCards
+    return liveOrdered
       .filter((card) => isFailedStatus(card.status))
       .map((card) => describeFailure(card.toolCallId, card.error, card.status))
-  }, [streamingHere, turn.toolCards])
+  }, [streamingHere, liveOrdered])
 
   return (
     <div className="chat">
@@ -252,12 +257,16 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
                 <span className="message__time">working…</span>
               </header>
 
-              {turn.reasoning.trim() !== '' || liveFailures.length > 0 ? (
-                <ThinkingBlock
+              {turn.reasoning.trim() !== '' ||
+              liveCards.length > 0 ||
+              liveFailures.length > 0 ? (
+                <ThoughtBlock
                   reasoning={turn.reasoning}
                   streaming
                   show={settings.showThinking}
+                  stepCount={liveCards.length}
                   failures={liveFailures}
+                  steps={liveParts}
                 />
               ) : null}
 
@@ -270,8 +279,6 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
               {turn.text.trim() !== '' ? (
                 <Markdown className="message__markdown">{turn.text}</Markdown>
               ) : null}
-
-              {liveParts}
 
               {turn.error !== null ? (
                 <p className="message__status message__status--error">

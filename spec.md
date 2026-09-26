@@ -25,3 +25,5 @@ The context protocol should be designed as such small context models can be part
 each chat session is completely different session with a model, and we never conflate contexts between chats. 
 
 ## RESPONSE STREAMING, thinking and executing code messages, is absolutely needed for better UI.
+
+

@@ -11,7 +11,7 @@ import {
   isFailedStatus,
   toStoredExecutionSource
 } from '@/features/chat/ExecutionCard'
-import { ThinkingBlock } from '@/features/chat/ThinkingBlock'
+import { ThoughtBlock } from '@/features/chat/ThoughtBlock'
 import { CopyButton } from '@/components/CopyButton'
 import { Markdown } from '@/lib/markdown'
 import { formatCost, formatDateTime, formatTokens } from '@/lib/format'
@@ -32,14 +32,24 @@ const ROLE_LABEL: Record<Message['role'], string> = {
 export function MessageItem({ message, toolCalls, showThinking }: MessageItemProps): React.JSX.Element {
   const ordered = [...toolCalls].sort((a, b) => a.seq - b.seq)
   const hasContent = message.content.trim() !== ''
+  const isAssistant = message.role === 'assistant'
 
-  // Failed attempts are folded into the thinking block. They stay in SQLite and
-  // stay in `ordered` for numbering, so a step the model refers to as "Step 2"
-  // is still labelled Step 2 even if Step 1 failed and was hidden.
+  // Failed attempts are folded away entirely. They stay in SQLite and stay in
+  // `ordered` for numbering, so a step the model refers to as "Step 2" is still
+  // labelled Step 2 even if Step 1 failed and was hidden.
   const failures = ordered
     .filter((call) => isFailedStatus(call.status))
     .map((call) => describeFailure(call.id, call.error, call.status))
   const steps = ordered.filter((call) => !isFailedStatus(call.status))
+
+  // The student-facing answer is a worked example: the model's own prose and
+  // equations, written for them. The agent's code, output and reasoning are not
+  // part of that answer — they go behind the "Thought" toggle above it.
+  const answer = isAssistant ? (
+    <Markdown className="message__markdown">{message.content}</Markdown>
+  ) : (
+    <p className="message__user-text">{message.content}</p>
+  )
 
   return (
     <article className="message" data-role={message.role} data-status={message.status}>
@@ -50,30 +60,24 @@ export function MessageItem({ message, toolCalls, showThinking }: MessageItemPro
         </span>
       </header>
 
-      {hasContent || failures.length > 0 ? (
-        <ThinkingBlock
+      {isAssistant ? (
+        <ThoughtBlock
           reasoning={message.reasoning ?? ''}
           streaming={message.status === 'streaming'}
           show={showThinking}
+          stepCount={steps.length}
           failures={failures}
+          steps={steps.map((call) => (
+            <ExecutionCard
+              key={call.id}
+              source={toStoredExecutionSource(call)}
+              index={ordered.indexOf(call)}
+            />
+          ))}
         />
       ) : null}
 
-      {hasContent ? (
-        message.role === 'user' ? (
-          <p className="message__user-text">{message.content}</p>
-        ) : (
-          <Markdown className="message__markdown">{message.content}</Markdown>
-        )
-      ) : null}
-
-      {steps.map((call) => (
-        <ExecutionCard
-          key={call.id}
-          source={toStoredExecutionSource(call)}
-          index={ordered.indexOf(call)}
-        />
-      ))}
+      {hasContent ? answer : null}
 
       {message.status === 'error' ? (
         <p className="message__status message__status--error">

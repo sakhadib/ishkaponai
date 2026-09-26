@@ -41,7 +41,7 @@ The second defining constraint:
 | # | Goal |
 |---|------|
 | G1 | Produce correct, complete, step-by-step solutions to school-level problems |
-| G2 | Every numeric claim is backed by executed code, shown to the student |
+| G2 | Every numeric claim is backed by executed code, one click away from the answer |
 | G3 | Answers in Bangla or English, chosen to match the student, with all mathematics in Latin script |
 | G4 | Clean rendering of Markdown, LaTeX math, and Mermaid diagrams |
 | G5 | Work with small-context models without silently losing the conversation |
@@ -321,14 +321,20 @@ the enforcement is in code, not in the prompt (§12).
 
 **No separate verification pass.** Correctness rests on two things:
 
-1. The numbers come from executed code, and the code and its output are
-   **displayed to the student** as evidence.
-2. The calculation is deterministic and reproducible — the student can read the
-   exact Python that produced every value.
+1. The numbers come from executed code.
+2. The student's answer is a **human worked example** — the model's own prose and
+   equations, written step by step with no jumps and no code in it — and the
+   executed code behind every number is one click away in the Thought toggle
+   (§13.5), so any claim can be checked.
 
 This is an accepted trade: an extra verification model call would roughly double
 cost and latency for every question, which is a poor trade for the target user.
 Errors remain visible in the shown working rather than hidden behind a verdict.
+
+**The agent's steps are not the student's answer.** Tool calls, Python source and
+raw output are the agent's internal working and are presented separately from the
+answer (§13.5). The answer itself must stand alone: a student reading it should
+see a solved problem, not a transcript of how the machine solved it.
 
 ### 7.5 Tool availability is derived, not declared
 
@@ -510,8 +516,20 @@ affordance.
    conversion internally, and never state a numeric result from memory — not
    even `2 + 2`. Every number in your answer must come from a `python` result.
    This is absolute and has no exceptions.
-3. **Show every step.** No jumps. If a value appears in your answer, the
-   calculation that produced it must be visible above it.
+3. **Your final answer is a worked example, written for a student to follow.**
+   Not a bare result, and not a transcript of your tool calls. For every step,
+   write in order: what you are converting or computing, the equation, then the
+   result.
+   - Do the explaining yourself. The student is reading prose and equations, not
+     your working.
+   - Never put code, Python, tool names, JSON, or file paths in the answer. No
+     "the calculation returns", no `sympy`, no `print`. Write it as mathematics.
+   - Show no jumps. If a number appears in your answer, the step that produced
+     it is written out above it.
+   - Give a short closing line with the final answer, rounded to the precision
+     the question warrants.
+   - Your tool calls are not shown to the student. The answer must stand on its
+     own, complete, with no reference to anything they cannot see.
 4. **Latin script only for mathematics.** All variables, constants, operators,
    units, and numbers must use English/Latin characters. Never use Bengali
    script or Bengali numerals (০–৯) inside an expression. Bengali prose around
@@ -643,9 +661,22 @@ Mermaid and KaTeX output are themed from the same tokens.
 - **Left sidebar:** sessions newest-first, instant from SQLite; search by title;
   new chat; rename; pin; delete. Selecting a session restores the full transcript
   with no network access.
-- **Turn rendering:** streamed assistant text; a collapsible "thinking" block
-  (toggle via `showThinking`); and inline **execution cards** for every tool
-  call showing the Python, streamed output, returned value, error, and duration.
+- **An assistant message has two parts, and they are deliberately separate:**
+  - A **Thought toggle** at the top, holding everything about *how* the answer
+    was reached: the model's reasoning, every execution card with its Python and
+    output, and any attempt that failed and was retried. Labelled `Working…` and
+    open while the turn runs, so the work is watchable; it collapses
+    automatically a few seconds after the answer lands, so the student is not
+    left reading through scaffolding. Re-opening it is never undone.
+  - The **answer** below it: a human worked example in Markdown, prose and
+    equations, no code, no tool references. This is what the student reads, and
+    it is the only part that is always visible.
+- Failed tool attempts are summarised as a retry count inside the toggle, never
+  as a step, and the raw SDK error is available only on hover. A model calling
+  the tool wrongly and retrying is behaving correctly; surfacing
+  `AI_TypeValidationError` to a school student is noise.
+- A collapsible "thinking" trace, gated by `showThinking`. Turning it off hides
+  the toggle and its evidence entirely.
 - **Copy button** on every assistant response, copying the raw Markdown source.
 - **Stop button** aborts the model stream and any running computation (via
   `checkInterrupt`).

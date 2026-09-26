@@ -2,9 +2,15 @@
 
 Cross-platform desktop application built on Electron, React and TypeScript.
 
-Packaging targets **Windows** (NSIS installer + portable zip), **macOS** (DMG +
-zip, universal-friendly x64/arm64) and **Linux** (AppImage, deb, rpm) via
-`electron-builder`.
+Packaging targets **Windows** (an MSI installer), **macOS** (DMG + zip) and **Linux**
+(AppImage, deb, rpm) via `electron-builder`.
+
+The Windows build is an MSI rather than an NSIS installer on purpose: it installs
+per-user with no administrator prompt, puts a shortcut in the Start menu and on the
+desktop, and registers itself in Windows so it can be removed from
+*Settings → Apps → Installed apps* like any other program. See
+[Windows installation](#windows-installation) for what to expect when a student runs
+it, including the publisher warning.
 
 ## Requirements
 
@@ -34,7 +40,7 @@ preload processes, and launches Electron pointed at the dev server.
 | `npm run start`      | Preview the production build without packaging           |
 | `npm run build`      | Typecheck, then compile main/preload/renderer to `out/`  |
 | `npm run typecheck`  | Typecheck all three TS projects (node, preload, web)   |
-| `npm run build:win`  | Windows NSIS installer + portable zip                    |
+| `npm run build:win`  | Windows MSI installer (x64 + arm64)               |
 | `npm run build:mac`  | macOS DMG + zip (requires macOS or `electron-builder` CI) |
 | `npm run build:linux`| AppImage + deb + rpm                                     |
 | `npm run build:unpack` | Package without producing installers (fast smoke test) |
@@ -42,8 +48,49 @@ preload processes, and launches Electron pointed at the dev server.
 | `npm run clean`      | Delete `out/` and `release/`                             |
 
 Cross-compilation caveats: building **macOS** artifacts requires macOS (or a
-macOS runner), and **deb/rpm** require the respective Linux tooling. Windows
-targets build natively on Windows.
+macOS runner), and **deb/rpm** require the respective Linux tooling. The Windows
+MSI builds natively on Windows and needs no extra tooling — `electron-builder`
+fetches WiX itself on first run.
+
+## Windows installation
+
+`npm run build:win` writes two files to `release/`:
+
+```
+ISHKAPON AI-0.1.0-x64-setup.msi      ~143 MB
+ISHKAPON AI-0.1.0-arm64-setup.msi    ~138 MB
+```
+
+A student double-clicks the one matching their machine and gets:
+
+- an install dialog with a folder to choose and an **Install** button
+- **no administrator prompt** — it installs per-user, into their own profile
+- a Start menu shortcut and a desktop shortcut, both named `ISHKAPON AI`
+- an entry under *Settings → Apps → Installed apps* with a working **Uninstall**
+  and **Repair**. *Change* is hidden by `electron-builder`'s MSI template, and
+  there is nothing in the app to change, so it would only be a button that opens
+  a dialog offering no options.
+
+Running a newer version over an older one replaces it rather than installing
+alongside. That works because `upgradeCode` is pinned in `electron-builder.yml`:
+Windows Installer uses it to recognise "this is the same product, newer version".
+It must never be regenerated, or every installed copy becomes orphaned beside a
+second copy with no upgrade path between them.
+
+### The publisher warning
+
+**The MSI is not code-signed.** There is no certificate in this repository and none
+configured, so on install Windows will say the publisher is **Unknown** and
+SmartScreen may show *"Windows protected your PC"*. The student clicks
+**More info → Run anyway**. This is normal for an unsigned installer and it is not a
+malware warning, but it is a poor first impression and it is fixable: a code-signing
+certificate (`CSC_LINK`, or the `sign` section of `electron-builder.yml`) makes the
+publisher name appear and removes the SmartScreen block. Until then, expect to
+explain this to anyone installing it.
+
+Chats are **not** deleted by uninstalling. The database lives in the user profile
+where Windows leaves it alone; see [PRIVACY.md](PRIVACY.md) for where it is and how
+to remove it deliberately.
 
 ## Project structure
 

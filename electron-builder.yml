@@ -51,24 +51,53 @@ asarUnpack:
 
 # ---------------------------------------------------------------------------
 # Windows
+#
+# MSI rather than NSIS, deliberately. The requirement is a *traditional* Windows
+# install: double-click, get your own copy, find it in the Start menu and on the
+# desktop, and remove it from Control Panel or Settings like any other program.
+# MSI is the format Windows itself owns that story for - the installed product
+# registers an Uninstall entry, so Apps & features works with no help from us,
+# and the install is recorded in the Windows Installer database rather than in a
+# private uninstaller of ours. NSIS can be made to imitate that, and does, but it
+# is an imitation.
+#
+# Two installers for one product is worse than one mediocre installer, so NSIS
+# and the portable zip are gone rather than kept alongside. `npm run build:win`
+# now produces exactly one thing a student is meant to double-click.
 # ---------------------------------------------------------------------------
 win:
   target:
-    - target: nsis
+    - target: msi
       arch: [x64, arm64]
-    - target: zip
-      arch: [x64]
   icon: build/icon.ico
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
 
-nsis:
+msi:
+  # `false` means the assisted installer: a dialog with an Install button and a
+  # progress bar, rather than a silent run with no visible UI at all. This is the
+  # "traditional" part of the requirement, and it is a deliberate choice against
+  # the silent default - a student should see that something is happening.
   oneClick: false
+
+  # Per-user, not per-machine. `false` here means the app installs into the
+  # current user's own profile and needs no administrator rights and no UAC
+  # prompt, which is what "each user gets their own copy" requires. `true` would
+  # put it in Program Files for everyone on the machine and demand elevation.
   perMachine: false
-  allowToChangeInstallationDirectory: true
+
+  # Both shortcuts. `createDesktopShortcut: true` creates it on first install and
+  # leaves it alone on repair or upgrade, so a student who deletes the icon does
+  # not get it back on every update. 'always' would force it back each time.
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: ISHKAPON AI
-  deleteAppDataOnUninstall: false
+
+  # Pinned rather than left to the default. The default derives this from `appId`
+  # with UUID v5, which is stable, but it is stable only for as long as nobody
+  # edits appId - and editing appId is exactly the kind of tidy-up that silently
+  # leaves every installed copy orphaned beside a second one, with no upgrade path
+  # between them. A literal here is auditable in the diff.
+  upgradeCode: D0CFF4CA-CD33-44D4-8A1B-DF5B2F416E62
 
 # ---------------------------------------------------------------------------
 # macOS
@@ -130,4 +159,7 @@ deb:
     - libsecret-1-0
 
 # Snap is intentionally not enabled: it requires a connected store account.
-# Publish portable Windows builds via the `zip` target above.
+# There is no portable Windows build either. An MSI that registers itself with
+# Windows is what "a program I installed" means, and a zip that has to be
+# unpacked somewhere by hand teaches students the wrong thing about where the app
+# came from.

@@ -163,10 +163,11 @@ file error, never a download, so a calculation cannot pull code from the interne
 - **Your API key:** clear the field in Settings.
 - **Everything:** quit the app and delete the `ishkapon.db` file and
   `window-state.json` in your user-data folder.
-- **Uninstalling the app does not delete either file.** The Windows installer is
-  configured with `deleteAppDataOnUninstall: false`, so your chats survive a
-  reinstall — which is convenient, and is also why uninstalling is *not* a way to
-  erase your data. *(Source: `electron-builder.yml`.)*
+- **Uninstalling the app does not delete either file.** An MSI removes what it
+  installed, and your database is not something it installed — it lives in your user
+  profile, where Windows leaves it alone. So your chats survive a reinstall, which
+  is convenient, and which is also why uninstalling is *not* a way to erase your
+  data. Delete the file yourself if you want it gone.
 
 ## School students and minors
 

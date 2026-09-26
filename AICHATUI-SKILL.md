@@ -1,7 +1,16 @@
 ---
 name: ai-chat-ui
 description: How to design, organize, and present information in an AI chat interface. Use when building or reworking a chat surface for an LLM — message list, streaming output, composer, tool/thinking display, history — especially in a TypeScript + Electron desktop app.
+license: MIT
+author: ISHKAPON
 ---
+
+> **Provenance and licence.** Written by ISHKAPON for this project, and released
+> under the [MIT License](LICENSE) like the rest of the repository. It is a design
+> reference, not a dependency: no code imports it, and `docs/ui-direction.md`
+> records which of its recommendations this project deliberately did *not* follow.
+> It is kept here because a decision is only auditable if the alternative that was
+> rejected is still readable.
 
 # Designing an AI Chat Interface
 

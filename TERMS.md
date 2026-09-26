@@ -133,5 +133,9 @@ the release, and changes are made in the same commit as the behaviour they descr
 
 ## 9. Contact
 
-**ISHKAPON**
-5, Kumarpara, Rajshahi, Bangladesh
+**ISHKAPON** — Rajshahi, Bangladesh
+
+<https://github.com/sakhadib/ishkaponai/issues>
+
+> No street address is published here, for the reason given in
+> [PRIVACY.md](PRIVACY.md#contact).

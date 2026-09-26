@@ -195,8 +195,14 @@ as the code. There is no separate published version that can drift out of date.
 
 ## Contact
 
-**ISHKAPON**
-5, Kumarpara, Rajshahi, Bangladesh
+**ISHKAPON** — Rajshahi, Bangladesh
 
-> A postal address is a slow way to arrange deletion of data. If an email address is
-> added here later, it should replace this line rather than sit beside it.
+**Enquiries, including requests to delete data:**
+<https://github.com/sakhadib/ishkaponai/issues>
+
+> A street address is deliberately not published here. This repository is public
+> and permanently indexed, and a home address in a public file is scraped within
+> hours and cannot be recalled. A city is enough to establish jurisdiction, and
+> the issue tracker is a faster and more accountable route for a request than
+> post. If a postal address is ever genuinely needed, it belongs in a private
+> reply to an issue rather than in a tracked file.

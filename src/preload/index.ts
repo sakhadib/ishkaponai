@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { AgentEventChannel, IpcChannel } from '@shared/ipc'
+import { AgentEventChannel, IpcChannel, SettingsEventChannel } from '@shared/ipc'
 import type { CreateSessionOptions, IshkaponApi, SetApiKeyResult } from '@shared/ipc'
 import type {
   AgentEvent,
@@ -20,10 +20,57 @@ import type {
  * renderer cannot reach a channel that is not on this list.
  */
 
-/** Theme resolved by the main process and passed via `additionalArguments`. */
+/**
+ * Values handed over by the main process via `webPreferences.additionalArguments`.
+ *
+ * The *mode* matters as much as the resolved theme: in `system` mode the
+ * renderer must keep following the OS after first paint, and only the mode
+ * says so. Resolved theme alone would leave live OS switching inert.
+ */
+function argValue(prefix: string): string | null {
+  return process.argv.find((value) => value.startsWith(prefix))?.slice(prefix.length) ?? null
+}
+
 function initialTheme(): 'light' | 'dark' {
-  const arg = process.argv.find((value) => value.startsWith('--ishkapon-theme='))
-  return arg?.endsWith('light') ? 'light' : 'dark'
+  return argValue('--ishkapon-theme=') === 'light' ? 'light' : 'dark'
+}
+
+function initialThemeSource(): 'light' | 'dark' | 'system' {
+  const value = argValue('--ishkapon-theme-source=')
+  return value === 'light' || value === 'dark' || value === 'system' ? value : 'dark'
+}
+
+/**
+ * Applies the theme to the document. Runs at preload time, before the page
+ * paints, which is why no inline `<script>` is needed — the strict CSP
+ * (`script-src 'self'`) would block one.
+ */
+function installTheme(): void {
+  const root = document.documentElement
+  const mode = initialThemeSource()
+
+  const paint = (theme: 'light' | 'dark'): void => {
+    root.dataset.theme = theme
+    root.style.colorScheme = theme
+  }
+
+  paint(initialTheme())
+  root.dataset.themeSource = mode
+
+  if (mode !== 'system') return
+
+  // In `system` mode, track the OS live. Main re-asserts the resolved theme
+  // whenever settings change, so this only has to handle OS-side changes.
+  const media = window.matchMedia('(prefers-color-scheme: dark)')
+  const onChange = (event: MediaQueryListEvent): void => {
+    paint(event.matches ? 'dark' : 'light')
+  }
+  if (typeof media.addEventListener === 'function') {
+    media.addEventListener('change', onChange)
+  } else {
+    // Safari < 14 and some embedded engines only expose the deprecated API.
+    media.addListener(onChange)
+  }
 }
 
 const api: IshkaponApi = {
@@ -54,7 +101,8 @@ const api: IshkaponApi = {
     ipcRenderer.invoke(IpcChannel.ChatSend, sessionId, text),
   stopTurn: (sessionId: string): Promise<void> => ipcRenderer.invoke(IpcChannel.ChatStop, sessionId),
 
-  onAgentEvent: (handler: (event: AgentEvent) => void): (() => void) => {    // The raw IpcRendererEvent is intentionally not forwarded: it would leak an
+  onAgentEvent: (handler: (event: AgentEvent) => void): (() => void) => {
+    // The raw IpcRendererEvent is intentionally not forwarded: it would leak an
     // object with a `sender` reference into the renderer world.
     const listener = (_event: unknown, payload: AgentEvent): void => handler(payload)
     ipcRenderer.on(AgentEventChannel, listener)
@@ -63,26 +111,20 @@ const api: IshkaponApi = {
     }
   },
 
+  onSettingsChanged: (handler: (settings: Settings) => void): (() => void) => {
+    const listener = (_event: unknown, payload: Settings): void => handler(payload)
+    ipcRenderer.on(SettingsEventChannel, listener)
+    return () => {
+      ipcRenderer.removeListener(SettingsEventChannel, listener)
+    }
+  },
+
   getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IpcChannel.AppGetInfo)
 }
 
 if (process.contextIsolated) {
   contextBridge.exposeInMainWorld('ishkapon', api)
-
-  // Apply the theme before the page paints, avoiding a flash of the wrong theme.
-  // This runs at preload time, so an inline <script> — which the strict CSP
-  // would block — is unnecessary.
-  const theme = initialTheme()
-  const apply = (): void => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.style.colorScheme = theme
-  }
-  apply()
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    // Only meaningful while the mode is `system`; the main process re-asserts
-    // the resolved theme when settings change.
-    if (document.documentElement.dataset.themeSource === 'system') apply()
-  })
+  installTheme()
 } else {
   // contextIsolation is enforced in the BrowserWindow config. This branch
   // exists so a misconfiguration fails loudly during development.

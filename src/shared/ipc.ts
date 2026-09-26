@@ -41,6 +41,9 @@ export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]
 /** Main -> renderer push channel for agent events. */
 export const AgentEventChannel = 'agent:event'
 
+/** Main -> renderer push channel for settings changes. */
+export const SettingsEventChannel = 'settings:changed'
+
 export interface CreateSessionOptions {
   modelId?: string | null
   preferredLanguage?: Session['preferredLanguage']
@@ -83,12 +86,21 @@ export interface IshkaponApi {
   deleteSession(id: string): Promise<void>
 
   // --- Chat ---
+  /**
+   * Starts a turn. The returned `messageId` is the **assistant** message being
+   * produced — the same id that `turn.started` and subsequent deltas carry.
+   */
   sendMessage(sessionId: string, text: string): Promise<{ messageId: string }>
   stopTurn(sessionId: string): Promise<void>
 
   // --- Events ---
   /** Subscribe to agent events. Returns an unsubscribe function. */
   onAgentEvent(handler: (event: AgentEvent) => void): () => void
+  /**
+   * Subscribe to settings changes. Main pushes on every write, including writes
+   * made outside the renderer, so the UI never shows a stale theme or model.
+   */
+  onSettingsChanged(handler: (settings: Settings) => void): () => void
 
   // --- App ---
   getAppInfo(): Promise<AppInfo>

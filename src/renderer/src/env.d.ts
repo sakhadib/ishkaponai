@@ -1,6 +1,9 @@
 /// <reference types="vite/client" />
 
-import type { IshkaponApi } from '@shared/types'
+// `IshkaponApi` lives in `@shared/ipc`, not `@shared/types`. Pointing at the
+// wrong module silently degraded `window.ishkapon` to `any`, because
+// `skipLibCheck` suppresses the unresolved-export error inside a `.d.ts`.
+import type { IshkaponApi } from '@shared/ipc'
 
 declare global {
   interface Window {

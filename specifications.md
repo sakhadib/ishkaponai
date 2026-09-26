@@ -650,6 +650,28 @@ KaTeX. Mermaid is opt-in per block: a ` ```mermaid ` fence renders as a diagram
 with a "view source" toggle and its own copy button, and a render failure falls
 back to showing the source rather than an error.
 
+**Legibility is a requirement, not a preference.** Three rules, and each exists
+because breaking it produces a specific defect a student can see:
+
+- **Display math must never clip vertically.** KaTeX draws fractions, roots and
+  matrices by positioning content *outside* the box it lays out (`.vlist > span`
+  is `height: 0`, with the numerator moved by `top: -2.3em`). Any `overflow`
+  other than `visible` slices the top off a numerator and the bottom off a
+  denominator. Since `overflow-x: auto` forces the cross axis to `auto`, the room
+  is made with vertical padding and the cross axis stays `auto` — a scrollbar
+  beats a sliced fraction.
+- **The fraction rule must be visible.** KaTeX draws it as a
+  `border-bottom-width` of `0.04em`, about two thirds of a pixel at body size,
+  which renders as a grey smear or not at all at a fractional device pixel
+  ratio. It is thickened to `0.08em`, the value KaTeX itself uses for the
+  comparable `.katex-sout` rule.
+- **The model is told when to use which.** Inline `$…$` is reserved for short
+  expressions; a fraction, radical, power or matrix goes in `$$…$$`, one
+  derivation step per block, and `\dfrac` is required for a fraction inside a
+  sentence (§11.1.9). Inline `\frac` is cramped by TeX's own design, not by
+  this implementation, so no renderer setting can rescue it — the prompt has to
+  ask for the right form.
+
 ### 13.2 Numeral normalisation (required)
 
 **KaTeX cannot parse Bengali numerals.** Before math rendering, a normalisation

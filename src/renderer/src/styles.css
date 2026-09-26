@@ -2352,22 +2352,38 @@ select.field__input {
 }
 
 /* --- KaTeX ---------------------------------------------------------------- */
-/* KaTeX ships its own fonts from the bundle. Colours come from the tokens so
-   display math reads correctly in both themes. */
+/* KaTeX ships its own fonts from the bundle; colour comes from the token so
+   display math matches the answer text around it. */
 .katex {
   color: inherit;
-  font-size: 1.04em;
+  font-size: 1.08em;
 }
 
+/* Display math. KaTeX builds fractions, roots and matrices by drawing content
+   *outside* the box it lays out: `.vlist > span` is `height: 0` with the real
+   numerator moved by `top: -2.3em`. So anything that clips slices the top off a
+   numerator and the bottom off a denominator, leaving the fraction rule
+   stranded between two stumps — which is what "the numerator and denominator
+   run together and there is no line" looks like.
+
+   `overflow-y: visible` is not available: `overflow-x: auto` forces the cross
+   axis to `auto` by specification. So the room is made with padding instead and
+   the cross axis is `auto` rather than `hidden` — a scrollbar the student can
+   use is a far better failure than a sliced fraction. */
 .katex-display {
-  margin: 0.9em 0;
-  padding: 4px 0;
+  margin: 1.1em 0;
+  padding: 0.7em 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 
-.katex-display > .katex {
-  white-space: normal;
+/* The rule between numerator and denominator is a `border-bottom-width` of
+   0.04em set inline — about two thirds of a pixel at body size, so at a
+   fractional device pixel ratio it renders as a grey smear or not at all. 0.08em
+   is what KaTeX itself uses for the comparable `.katex-sout` rule. The width is
+   an inline style, so `!important` is the only way to reach it. */
+.katex .mfrac .frac-line {
+  border-bottom-width: 0.08em !important;
 }
 
 /* A parse failure renders KaTeX's error markup, which is loud by design: a
@@ -2379,9 +2395,8 @@ select.field__input {
 }
 
 /* --- Mermaid theming ------------------------------------------------------ */
-/* Mermaid inlines its own colours in the SVG, which does not adapt to a theme
-   switch. Recolour the common shapes from tokens so a diagram stays legible
-   in both light and dark. */
+/* Mermaid inlines its own colours in the SVG, which do not follow the tokens.
+   Recolour the common shapes so a diagram stays legible in the app's palette. */
 .mermaid__canvas svg .node rect,
 .mermaid__canvas svg .node polygon,
 .mermaid__canvas svg .node circle,

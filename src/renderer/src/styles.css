@@ -1857,39 +1857,28 @@ select.field__input {
   gap: 12px;
 }
 
-.settings__models-empty {
+/**
+ * The model choice: two options, and the id field that the second one reveals.
+ *
+ * Replaces a list of every tool-capable model. That list was the wrong shape for
+ * both decisions a student actually makes � wanting free meant scrolling past a
+ * hundred paid entries, and wanting a *specific* model meant hunting for it in a
+ * hundred and thirty. Two options, and a field to paste into.
+ *
+ * Selection is shown with `:has()` rather than a `data-selected` attribute so the
+ * checked state cannot drift from the input that produces it.
+ */
+.model-choice {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-/**
- * A section of the model list. Deliberately **not** a scroll container.
- *
- * It used to cap at 340px and scroll internally, which put two scroll regions
- * inside a settings panel that is itself the scroller — and stacked them, so
- * reaching the paid section meant scrolling past a full-height free-tier list
- * first. With a hundred-odd models that reads as "only the free ones are
- * selectable", which is exactly the report this fixes.
- *
- * One scroller per screen. The legend sticks relative to the panel, so you can
- * still tell which section you are in while scrolling a long list.
- */
-.model-group {
+  gap: 8px;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
+  border: none;
 }
 
-.model-group__legend {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 6px 10px;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--bg-subtle);
+.model-choice__legend {
+  padding: 0;
   color: var(--text-muted);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -1897,82 +1886,183 @@ select.field__input {
   text-transform: uppercase;
 }
 
-.model-group__count {
-  color: var(--text-faint);
+.model-choice__option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  cursor: pointer;
+}
+
+.model-choice__option:hover {
+  border-color: var(--border-strong);
+}
+
+.model-choice__option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.model-choice__option input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  flex: none;
+}
+
+.model-choice__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.model-choice__name {
+  font-size: var(--text-sm);
   font-weight: 500;
-  letter-spacing: 0;
+}
+
+.model-choice__detail {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.model-choice__id {
+  align-self: flex-start;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/**
+ * The pasted-id field.
+ *
+ * Indented under the option it belongs to rather than sitting flush with the
+ * panel, so it reads as a consequence of choosing "Any model" and not as a
+ * third option.
+ */
+.model-id {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 2px 26px;
+}
+
+/**
+ * The ID box is the one field in the app whose value is code rather than prose,
+ * so it is set in the mono face and given a little more room than a name field.
+ * The mono matters functionally, not decoratively: a slash in a proportional
+ * face sits ambiguously against the letters either side of it, and this string is
+ * one character from being wrong.
+ */
+.model-id__input {
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  letter-spacing: 0.01em;
+}
+
+.model-id__input::placeholder {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.model-id__input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+.model-id__label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.model-id__input {
+  font-family: var(--font-mono);
+}
+
+/**
+ * A shape the app can reject outright, versus an id that is merely absent from a
+ * cached catalog. The distinction matters: the first is definitely wrong, the
+ * second might be new, and telling a student their correct id is invalid because
+ * our cache is an hour old would be its own kind of silent failure.
+ */
+.model-id__problem {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.model-id__known {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.model-id__unknown {
+  margin: 0;
+  color: var(--warn);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.model-id__warn {
+  color: var(--warn);
+  font-weight: 500;
+}
+
+/**
+ * The catalog is no longer shown, so this is the only trace of it. Kept because
+ * it is the answer to "why is my model not in here?" and because the count is
+ * what makes a six-entry fallback visibly different from a full list.
+ */
+.settings__catalog-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
 }
 
 .settings__count {
   margin: 0;
   color: var(--text-faint);
   font-size: var(--text-xs);
+  line-height: var(--leading-normal);
 }
 
-.model-row {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 8px 10px;
-  border-top: 1px solid var(--border-subtle);
-  cursor: pointer;
+/**
+ * Smaller than a normal button: this is housekeeping, not a decision, and it
+ * sits in the same row as a line of faint text. `flex: none` because the row
+ * wraps, and a button is content-sized — without it a shrink race against the
+ * sentence beside it can leave the label clipped rather than the sentence
+ * wrapping, which is the wrong one to lose.
+ */
+.settings__refresh {
+  flex: none;
+  min-height: 28px;
+  padding: 2px var(--space-md);
+  font-size: var(--text-xs);
 }
 
-.model-row:hover {
-  background: var(--bg-hover);
-}
-
-.model-row[data-selected='true'] {
-  background: var(--accent-soft);
-}
-
-.model-row__radio {
-  margin-top: 3px;
-  accent-color: var(--accent);
-}
-
-.model-row__body {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.model-row__name {
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
-.model-row__id {
+.settings__refresh:disabled {
   color: var(--text-faint);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  overflow-wrap: anywhere;
-}
-
-.model-row__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-}
-
-.model-row__warn {
-  color: var(--warn);
-}
-
-.custom-model__summary {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-.custom-model__row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  cursor: default;
+  opacity: 0.7;
 }
 
 .api-key {

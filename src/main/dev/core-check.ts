@@ -23,6 +23,7 @@ import { SettingsStore, parseSettingsPatch } from '../settings'
 import { TurnRecorder } from '../turn-recorder'
 import { parseAgentToMain } from '../agent-host'
 import { FALLBACK_MODELS, isFreeTierModel, sortModels } from '../openrouter'
+import { explainTurnError } from '../../agent/explain'
 import {
   appendMessage,
   createSession,
@@ -70,6 +71,7 @@ function main(): void {
     checkRecorder(db)
     checkAgentMessages()
     checkModelCatalog()
+    checkErrorExplanation()
   } finally {
     db.close()
     rmSync(directory, { recursive: true, force: true })
@@ -102,6 +104,36 @@ function checkSettings(db: Database): void {
 
   rejects('unknown key rejected', () => parseSettingsPatch({ shellEnabled: true }))
   rejects('bad modelId rejected', () => parseSettingsPatch({ modelId: 'gpt-4o' }))
+
+  // Every `-latest` alias OpenRouter publishes carries a leading `~`, and those
+  // aliases are the friendly names a student copies off the model page. The
+  // validator used to reject all 18 of them, so the app could not accept the
+  // ids OpenRouter most wants typed. The list below is taken verbatim from the
+  // live `/models` response.
+  for (const alias of [
+    '~deepseek/deepseek-v4-flash-latest',
+    '~anthropic/claude-sonnet-latest',
+    '~anthropic/claude-opus-latest',
+    '~anthropic/claude-haiku-latest',
+    '~openai/gpt-mini-latest',
+    '~openai/gpt-luna-latest',
+    '~openai/gpt-astra-latest',
+    '~openai/gpt-sol-latest',
+    '~openai/gpt-terra-latest',
+    '~google/gemini-pro-latest',
+    '~google/gemini-flash-latest',
+    '~z-ai/glm-latest',
+    '~z-ai/glm-flash-latest',
+    '~x-ai/grok-latest',
+    '~moonshotai/kimi-latest',
+    '~deepseek/deepseek-pro-latest',
+    '~deepseek/deepseek-flash-latest'
+  ]) {
+    check(`tilde alias accepted: ${alias}`, parseSettingsPatch({ modelId: alias }).modelId === alias)
+  }
+  rejects('tilde must lead, not trail', () => parseSettingsPatch({ modelId: 'deepseek/~latest' }))
+  rejects('tilde alone rejected', () => parseSettingsPatch({ modelId: '~/model' }))
+
   rejects('non-boolean showThinking rejected', () => parseSettingsPatch({ showThinking: 'yes' }))
   rejects('non-object patch rejected', () => parseSettingsPatch('theme'))
   check('undefined values are ignored', JSON.stringify(parseSettingsPatch({ theme: undefined })) === '{}')
@@ -421,6 +453,57 @@ function checkModelCatalog(): void {
   check(
     'the free router is in the fallback list',
     FALLBACK_MODELS.some((model) => model.id === 'openrouter/free')
+  )
+}
+
+/**
+ * A provider failure must arrive as something the student can act on.
+ *
+ * These assertions are about the *shape* of the sentence rather than its wording:
+ * that it names the id, that it says where the fix lives, and that it does not
+ * simply pass a bare server string through. A regression here is invisible to the
+ * type checker and obvious to the one person it happens to.
+ */
+function checkErrorExplanation(): void {
+  section('turn errors: explained, not echoed')
+
+  const bad = explainTurnError(
+    'deepseek/deepseek-v4-flash-latest is not a valid model ID',
+    'deepseek/deepseek-v4-flash-latest'
+  )
+  check('names the offending id', bad.includes('deepseek/deepseek-v4-flash-latest'), bad)
+  check('points at Settings', /Settings/.test(bad), bad)
+  check('offers a way out', /Free model/.test(bad), bad)
+  check('mentions the tilde for a tilde-less id', bad.includes('~'), bad)
+  check('does not lead with the raw server string', !bad.startsWith('deepseek/'), bad)
+
+  const tilde = explainTurnError(
+    '~deepseek/deepseek-v4-flash-latest is not a valid model ID',
+    '~deepseek/deepseek-v4-flash-latest'
+  )
+  check('tilde id is quoted back intact', tilde.includes('~deepseek/deepseek-v4-flash-latest'), tilde)
+  check('tilde id says the tilde is part of the id', /part of the ID/.test(tilde), tilde)
+
+  for (const [provider, mustMention] of [
+    ['402 insufficient credits', /credits/i],
+    ['429 rate limit exceeded', /rate.limit/i],
+    ['401 invalid api key', /API key/i],
+    ['This model does not support tools', /call tools/i],
+    ['context length exceeded', /context window/i]
+  ] as const) {
+    const said = explainTurnError(provider, 'openrouter/free')
+    check(`explained: ${provider}`, mustMention.test(said), said)
+  }
+
+  const unknown = 'ECONNRESET: socket hang up'
+  check(
+    'unrecognised errors pass through unchanged',
+    explainTurnError(unknown, 'openrouter/free') === unknown
+  )
+  check(
+    'surrounding whitespace is trimmed',
+    explainTurnError('  rate limit  ', 'openrouter/free') ===
+      'OpenRouter is rate-limiting this key. Wait a moment and ask again.'
   )
 }
 

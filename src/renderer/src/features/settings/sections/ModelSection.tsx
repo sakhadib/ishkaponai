@@ -4,7 +4,7 @@
  * Separate from Account because the two are chosen at different times and for
  * different reasons: the key is a credential, the model is a preference.
  */
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { ModelPicker } from '@/features/settings/ModelPicker'
 import { SettingsPanel } from '@/features/settings/sections/SettingsPanel'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -18,8 +18,8 @@ export function ModelSection(): React.JSX.Element {
   const loadModels = useSettingsStore((state) => state.loadModels)
   const loaded = useSettingsStore((state) => state.loaded)
 
-  const [customModel, setCustomModel] = useState('')
-
+  // The catalog is no longer *shown*, but it is still what validates a pasted
+  // id, so it is still worth having.
   useEffect(() => {
     if (!loaded) return
     void loadModels()
@@ -28,7 +28,7 @@ export function ModelSection(): React.JSX.Element {
   return (
     <SettingsPanel
       title="Model"
-      description="A tool-calling model is required. ISHKAPON cannot compute anything without one, so a model that cannot call tools will not work here."
+      description="ISHKAPON cannot compute anything without a model that can call tools, so a model without tool-calling will not work here."
     >
       <ModelPicker
         models={models}
@@ -37,14 +37,6 @@ export function ModelSection(): React.JSX.Element {
         notice={modelsNotice}
         onSelect={(id) => void update({ modelId: id })}
         onRefresh={() => void loadModels(true)}
-        customId={customModel}
-        onCustomChange={setCustomModel}
-        onCustomCommit={() => {
-          const id = customModel.trim()
-          if (id === '') return
-          setCustomModel('')
-          void update({ modelId: id })
-        }}
       />
 
       <div className="settings__divider" role="presentation" />

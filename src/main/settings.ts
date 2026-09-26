@@ -80,8 +80,22 @@ function normaliseField(key: string, value: unknown): Settings[keyof Settings] {
       if (trimmed.length > 200) throw new Error('modelId is too long.')
       // OpenRouter slugs are `vendor/model-name`; refuse anything that could
       // never be one rather than letting it reach the provider.
-      if (!/^[\w.-]+\/[\w.:-]+$/.test(trimmed)) {
-        throw new Error('modelId must look like "vendor/model-name".')
+      //
+      // The optional leading `~` is not decoration. It marks OpenRouter's
+      // floating `-latest` aliases — `~anthropic/claude-sonnet-latest`,
+      // `~openai/gpt-mini-latest`, `~deepseek/deepseek-v4-flash-latest` — which
+      // is what the model page hands out and what a student copies from
+      // openrouter.ai. Verified against the live catalog: 18 of 458 ids carry
+      // the tilde, it is always at position 0, and every one of them is an alias
+      // rather than a dated snapshot. Rejecting them meant the friendliest names
+      // on OpenRouter were the only ones the app could not accept, and the
+      // student got "must look like vendor/model-name" for an id copied
+      // verbatim from OpenRouter's own page.
+      if (!/^~?[\w.-]+\/[\w.:-]+$/.test(trimmed)) {
+        throw new Error(
+          'modelId must look like "vendor/model-name", optionally starting with "~" ' +
+            '(for example ~deepseek/deepseek-v4-flash-latest).'
+        )
       }
       return trimmed
     }

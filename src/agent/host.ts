@@ -50,6 +50,7 @@ import {
 } from './context'
 import { createResolver, contextLengthFor, DEFAULT_COMPACTION_MODEL } from './provider'
 import type { ChatModelFactory } from './provider'
+import { explainTurnError } from './explain'
 import { TITLE_MODEL, generateSessionTitle } from './title'
 import { PRELOAD_PACKAGES } from './wheels'
 import { generateText } from 'ai'
@@ -85,6 +86,8 @@ const TURN_TIMEOUT_MS = 10 * 60 * 1000
 interface ActiveTurn {
   readonly sessionId: string
   readonly messageId: string
+  /** The model this turn asked for, so a failure can be explained in its terms. */
+  readonly modelId: string
   readonly controller: AbortController
   /** Ids of tool calls that have been opened but not yet closed. */
   readonly openToolCalls: Set<string>
@@ -310,6 +313,7 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
     const turn: ActiveTurn = {
       sessionId,
       messageId,
+      modelId: command.modelId,
       controller: new AbortController(),
       openToolCalls: new Set<string>(),
       toolCode: new Map<string, string>(),
@@ -321,11 +325,12 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
     try {
       await this.runTurn(command, turn, chat)
     } catch (error) {
+      const reason = errorMessage(error)
       this.settle(turn, {
         type: 'turn.error',
         sessionId,
         messageId,
-        message: errorMessage(error),
+        message: explainTurnError(reason, command.modelId),
         fatal: false
       })
     } finally {
@@ -634,16 +639,20 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
         this.log(`stream aborted: ${part.reason ?? 'no reason given'}`)
         return true
 
-      case 'error':
-        this.log(`stream error: ${errorMessage(part.error)}`)
+      case 'error': {
+        const reason = errorMessage(part.error)
+        this.log(`stream error: ${reason}`)
         this.settle(turn, {
           type: 'turn.error',
           sessionId: turn.sessionId,
           messageId: turn.messageId,
-          message: errorMessage(part.error),
+          // Restated in plain words: the provider's own text names the id but not
+          // the cause, and never says where to fix it.
+          message: explainTurnError(reason, turn.modelId),
           fatal: false
         })
         return true
+      }
 
       // Parts that cannot occur with a single local tool, handled so a future
       // SDK addition is a log line rather than a silent drop.
@@ -1045,3 +1054,5 @@ function errorMessage(error: unknown): string {
     return String(error)
   }
 }
+
+

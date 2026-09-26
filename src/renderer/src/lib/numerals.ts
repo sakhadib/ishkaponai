@@ -1,9 +1,9 @@
 /**
  * Bengali numeral normalisation (spec §13.2).
  *
- * KaTeX cannot parse Bengali digits. A student who types `২+৩` — which is
- * natural for the target user — would otherwise get a raw KaTeX parse error
- * instead of an answer. This module maps `০১২৩৪৫৬৭৮৯` to `0123456789`.
+ * MathJax cannot parse Bengali digits. A student who types `২+৩` — which is
+ * natural for the target user — would otherwise get a raw parse error instead of
+ * an answer. This module maps `০১২৩৪৫৬৭৮৯` to `0123456789`.
  *
  * The mapping is built from literal glyphs rather than a hand-written codepoint
  * offset, because the two adjacent blocks are visually near-identical:

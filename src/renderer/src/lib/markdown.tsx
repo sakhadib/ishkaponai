@@ -1,7 +1,7 @@
 /**
  * The Markdown pipeline (spec §13.1).
  *
- * `react-markdown` + `remark-gfm` + `remark-math` + `rehype-katex`, with two
+ * `react-markdown` + `remark-gfm` + `remark-math` + `rehype-mathjax`, with two
  * source-level transforms in front and one plugin alongside:
  *
  *  - `normaliseMathSource` rewrites `\[…\]` / `\(…\)` to the dollar delimiters
@@ -11,15 +11,23 @@
  *  - `remarkBengaliNumeralsInMath` makes `২ + ৩` render as `2 + 3` inside math
  *    (spec §13.2).
  *
- * KaTeX cannot be made non-throwing through `rehype-katex` — it omits
- * `throwOnError` from its options and hard-codes `true`. It does, however,
- * catch its own parse errors and fall back to a `katex-error` span, so a single
- * malformed expression degrades to visible source instead of taking the
- * message down with it.
+ * Mathematics is rendered by **MathJax**, in the pipeline, as SVG. KaTeX was
+ * the previous renderer and was replaced because its metrics read as cramped to
+ * a student — the symbols sat too close together to scan. The two also differ in
+ * capability: MathJax renders the full AMS environment set including
+ * `multline`, and it is more forgiving of a malformed expression, falling back
+ * to showing the source rather than to an error box.
+ *
+ * The configuration and the reasoning behind it live in `lib/mathjax.ts`.
+ * Rendering happens at build-of-the-tree time, so there is no MathJax on the
+ * client and no runtime typesetting step.
  *
  * Security posture, per spec §12.2 — model output is untrusted:
  *  - `rehype-raw` is deliberately absent, so raw HTML in the source is dropped
  *    rather than parsed.
+ *  - MathJax's `html` extension is deliberately not loaded, so TeX cannot emit
+ *    markup or `\href` URLs. Verified: `$\href{javascript:…}$` and
+ *    `$\html{<img onerror=…>}$` both render as inert text.
  *  - `dangerouslySetInnerHTML` appears nowhere in this file or its children.
  *  - `img` is overridden: only `data:` URLs render, and anything else becomes a
  *    visible link to the source so a remote fetch is never even attempted.
@@ -30,16 +38,16 @@
 import { Children, isValidElement, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
-import rehypeKatex from 'rehype-katex'
+import type { PluggableList } from 'unified'
+import rehypeMathjax from 'rehype-mathjax'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import { CodeBlock } from '@/components/CodeBlock'
 import { MermaidBlock } from '@/components/MermaidBlock'
+import { MATHJAX_OPTIONS } from '@/lib/mathjax'
 import { normaliseMathSource } from '@/lib/mathSource'
 import { remarkBengaliNumeralsInMath } from '@/lib/remarkNumerals'
 import type { ReactNode } from 'react'
-
-import 'katex/dist/katex.min.css'
 
 /** Recursively flattens a React node tree to its text content. */
 function textOf(node: ReactNode): string {
@@ -208,14 +216,19 @@ export interface MarkdownProps {
   className?: string
 }
 
+/**
+ * Plugin lists, built once at module scope.
+ *
+ * These never vary, and a module constant is stronger than a `useMemo` with an
+ * empty dependency array: there is no way for a re-render to hand react-markdown
+ * a new array identity and make it re-parse the whole answer.
+ */
+const REMARK_PLUGINS: PluggableList = [remarkGfm, remarkMath, remarkBengaliNumeralsInMath]
+const REHYPE_PLUGINS: PluggableList = [[rehypeMathjax, MATHJAX_OPTIONS]]
+
 export function Markdown({ children, className }: MarkdownProps): React.JSX.Element {
-  // The plugin list is constant; `useMemo` keeps react-markdown from
-  // re-parsing on every streamed delta.
-  const remarkPlugins = useMemo(
-    () => [remarkGfm, remarkMath, remarkBengaliNumeralsInMath],
-    []
-  )
-  const rehypePlugins = useMemo(() => [rehypeKatex], [])
+  const remarkPlugins = REMARK_PLUGINS
+  const rehypePlugins = REHYPE_PLUGINS
 
   // Runs on every streamed delta, so it stays linear and allocation-light. It
   // short-circuits when the text holds no delimiter at all, which is the common

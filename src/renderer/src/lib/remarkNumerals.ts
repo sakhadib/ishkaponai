@@ -12,8 +12,8 @@
  * `node.data.hChildren` (a `<code class="math-inline">` / `<pre>` wrapper with
  * the raw source as a text child). `mdast-util-to-hast` prefers
  * `data.hChildren` over `node.value`, so rewriting `value` alone is silently
- * ignored and KaTeX still receives `২`. Both copies therefore have to be
- * rewritten, or the maths reaches KaTeX unnormalised.
+ * ignored and the renderer still receives `২`. Both copies therefore have to be
+ * rewritten, or the maths reaches MathJax unnormalised.
  *
  * With `remark-math` installed, the node types come from `mdast-util-math`.
  * They are declared structurally below so this file does not depend on a

@@ -103,7 +103,7 @@ Selecting one restores the full transcript with no network access.
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ Renderer (sandboxed, contextIsolated, no Node)               │
-│   React · Zustand · react-markdown · KaTeX · Mermaid         │
+│   React · Zustand · react-markdown · MathJax · Mermaid        │
 │   window.ishkapon — typed, minimal bridge                     │
 └───────────────▲──────────────────────────────────┬───────────┘
                 │ IPC (invoke/handle + events)     │ MessagePort
@@ -641,45 +641,65 @@ requires it rather than a guess.
 | Concern | Choice |
 |---|---|
 | Markdown | `react-markdown` + `remark-gfm` |
-| Mathematics | `remark-math` + `rehype-katex`, rendering with **KaTeX** |
+| Mathematics | `remark-math` + `rehype-mathjax`, rendering with **MathJax** to inline SVG |
 | Diagrams | `mermaid` (lazy-loaded, rendered on demand) |
 | Copy | Per-response and per-code-block |
 
 `$inline$` and `$$block$$` are supported natively by the model and rendered by
-KaTeX. Mermaid is opt-in per block: a ` ```mermaid ` fence renders as a diagram
+MathJax. Mermaid is opt-in per block: a ` ```mermaid ` fence renders as a diagram
 with a "view source" toggle and its own copy button, and a render failure falls
 back to showing the source rather than an error.
 
-**Legibility is a requirement, not a preference.** Three rules, and each exists
-because breaking it produces a specific defect a student can see:
+**Rendering happens in the pipeline, not in the browser.** `rehype-mathjax`
+converts each math node to SVG while the Markdown is being turned into React
+elements, so there is no MathJax on the client, no runtime typesetting step, and
+nothing for the CSP to allow. Configuration is in `renderer/src/lib/mathjax.ts`.
 
-- **Display math must never clip vertically.** KaTeX draws fractions, roots and
-  matrices by positioning content *outside* the box it lays out (`.vlist > span`
-  is `height: 0`, with the numerator moved by `top: -2.3em`). Any `overflow`
-  other than `visible` slices the top off a numerator and the bottom off a
-  denominator. Since `overflow-x: auto` forces the cross axis to `auto`, the room
-  is made with vertical padding and the cross axis stays `auto` — a scrollbar
-  beats a sliced fraction.
-- **The fraction rule must be visible.** KaTeX draws it as a
-  `border-bottom-width` of `0.04em`, about two thirds of a pixel at body size,
-  which renders as a grey smear or not at all at a fractional device pixel
-  ratio. It is thickened to `0.08em`, the value KaTeX itself uses for the
-  comparable `.katex-sout` rule.
-- **The model is told when to use which.** Inline `$…$` is reserved for short
-  expressions; a fraction, radical, power or matrix goes in `$$…$$`, one
-  derivation step per block, and `\dfrac` is required for a fraction inside a
-  sentence (§11.1.9). Inline `\frac` is cramped by TeX's own design, not by
-  this implementation, so no renderer setting can rescue it — the prompt has to
-  ask for the right form.
+**SVG output, not CHTML.** CHTML is about a third of the size but needs a
+`fontURL` pointing at MathJax's own woff files, which under `font-src 'self'`
+would have to be copied into the bundle and kept in step with the MathJax version.
+SVG carries its glyph geometry in the markup, needs no font at all, and stays
+sharp when a student zooms into an equation. Glyphs are filled with
+`currentColor`, so equations take the answer's colour from `--text` with no
+per-glyph work.
+
+**The TeX extension list is explicit, not `AllPackages`.** `AllPackages` includes
+`html`, which lets TeX emit raw markup and `\href` URLs, and `require`, which can
+pull in further components at parse time. Model output is untrusted (§12.2), so
+both are left out and the list of what *is* loaded is readable in one place.
+Verified inert: `$\href{javascript:…}$` and `$\html{<img onerror=…>}$` both
+render as text, producing no anchor, no image and no event attribute.
+
+`ams` is in the list, and it is what makes a multi-line derivation possible:
+`align`, `align*`, `gather`, `multline`, `split`, `cases`, `dfrac` and `\tag`.
+`mhchem` and `physics` are there for the same reason — a chemical equation or a
+differential renders at all only because they are loaded.
+
+**Legibility is a requirement, not a preference.** Three rules, each because
+breaking it produces a defect a student can see:
+
+- **Display math is left-aligned, not centred.** A derivation is read downwards
+  and its `=` signs are meant to line up. Centring a three-line `align` discards
+  that and leaves the student re-finding the left edge on every row. It also
+  keeps equations on the same left edge as the prose.
+- **A wide equation scrolls; it never stretches the answer column.** The SVG
+  scales with its container and `overflow-x: auto` takes the rest.
+- **The model is told what to write.** Inline `$…$` is for short expressions
+  only; a fraction, radical, power or matrix goes in `$$…$$`; a derivation of two
+  or more steps is written as `align` with one step per line, never as a single
+  chained line; `\dfrac` is required for a fraction inside a sentence
+  (§11.1.9). Inline `\frac` is cramped by TeX's own design, not by this
+  implementation, so no renderer setting rescues it — the prompt has to ask for
+  the right form.
 
 ### 13.2 Numeral normalisation (required)
 
-**KaTeX cannot parse Bengali numerals.** Before math rendering, a normalisation
+**MathJax cannot parse Bengali numerals.** Before math rendering, a normalisation
 pass maps `০১২৩৪৫৬৭৮৯` → `0123456789` within math and code spans only. Prose is left
 untouched.
 
 This is a robustness requirement, not a style preference: a student writing
-`২+৩` would otherwise get a raw KaTeX error instead of an answer. The prompt rule
+`২+৩` would otherwise get a raw parse error instead of an answer. The prompt rule
 (§11.1.4) reduces how often this occurs; normalisation handles the rest.
 
 ### 13.3 Typography
@@ -689,7 +709,9 @@ This is a robustness requirement, not a style preference: a student writing
 
 Font stack: `'Roboto', 'Kalpurush', sans-serif`. Because browsers fall back
 per-character, Latin renders in Roboto and Bangla in Kalpurush, with no manual
-tagging of runs. KaTeX ships its own fonts, bundled locally.
+tagging of runs. Mathematics is **not** set in either: MathJax's SVG output
+carries its own glyph geometry, so an equation needs no maths font and stays
+sharp at any zoom.
 
 All three are bundled as local `woff2` under `font-src 'self'`. This keeps the app
 offline-capable and satisfies the CSP.
@@ -711,8 +733,11 @@ is in dark mode gets a dark title bar and window frame around a light app.
 
 Every colour in the stylesheet is a token — no literal colours in component
 rules. Contrast is **measured**, not eyeballed, with `tools/contrast.mjs`; all
-16 pairs clear WCAG AA 4.5:1. Re-run it after changing any colour. Mermaid and
-KaTeX output are styled from the same tokens.
+16 pairs clear WCAG AA 4.5:1. Re-run it after changing any colour. Mermaid
+output is recoloured from the same tokens, and MathJax's SVG is filled with
+`currentColor` so it needs no per-glyph theming at all. The one exception is the
+parse-error span, where the plugin writes a literal hex inline and the
+stylesheet overrides it with `!important`.
 
 ### 13.5 Chat UI
 
@@ -803,7 +828,7 @@ the agent host, not the renderer.
 | Secrets | Electron `safeStorage` | Async API |
 | Renderer store | `zustand` | |
 | Markdown | `react-markdown` + `remark-gfm` | |
-| Mathematics | `remark-math` + `rehype-katex` + `katex` | |
+| Mathematics | `remark-math` + `rehype-mathjax` + `mathjax-full` | Pipeline-rendered to SVG |
 | Diagrams | `mermaid` | Lazy-loaded |
 | Fonts | `roboto`, `kalpurush` | Local `woff2`, bundled |
 
@@ -850,7 +875,10 @@ packages qualify; React does not.
 - [ ] The student can view and edit the running summary
 
 ### Rendering
-- [ ] `$inline$` and `$$block$$` render as KaTeX
+- [ ] `$inline$` and `$$block$$` render as MathJax
+- [ ] A multi-line `\begin{align}` derivation renders with its rows and aligned `=`
+- [ ] A parse failure shows the source in red rather than an error box or a blank
+- [ ] `$\href{javascript:…}$` in model output produces no anchor and no URL
 - [ ] `২ + ৩` inside math renders as `2 + 3`
 - [ ] Bangla renders in Kalpurush, Latin in Roboto, in the same sentence
 - [ ] A ` ```mermaid ` fence renders, and a broken one falls back to source

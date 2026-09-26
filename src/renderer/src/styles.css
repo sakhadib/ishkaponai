@@ -1457,7 +1457,7 @@ select.field__input {
 /* The answer surface. Sized at the 16px body floor and given a real measure:
    a solution is one column of prose and equations, and full-bleed lines make it
    hard to track back to the next one. `overflow-wrap: anywhere` keeps a long
-   KaTeX expression from pushing the pane sideways. */
+   expression from pushing the pane sideways. */
 .markdown {
   max-width: var(--measure-prose);
   color: var(--text);
@@ -2351,45 +2351,42 @@ select.field__input {
   background: var(--border-subtle);
 }
 
-/* --- KaTeX ---------------------------------------------------------------- */
-/* KaTeX ships its own fonts from the bundle; colour comes from the token so
-   display math matches the answer text around it. */
-.katex {
+/* --- MathJax -------------------------------------------------------------- */
+/* MathJax renders to inline SVG in the pipeline (`lib/mathjax.ts`), so there is
+   no stylesheet to import and no font to load — the glyph geometry is in the
+   markup. The paths are filled with `currentColor`, so an equation takes the
+   answer's colour from `--text` with no per-glyph work.
+
+   The sizing is in `em`, so an equation tracks the surrounding answer size,
+   including the Bangla step-up on `.markdown[data-lang='bn']`. */
+
+mjx-container {
   color: inherit;
-  font-size: 1.08em;
+  font-size: 1.05em;
 }
 
-/* Display math. KaTeX builds fractions, roots and matrices by drawing content
-   *outside* the box it lays out: `.vlist > span` is `height: 0` with the real
-   numerator moved by `top: -2.3em`. So anything that clips slices the top off a
-   numerator and the bottom off a denominator, leaving the fraction rule
-   stranded between two stumps — which is what "the numerator and denominator
-   run together and there is no line" looks like.
-
-   `overflow-y: visible` is not available: `overflow-x: auto` forces the cross
-   axis to `auto` by specification. So the room is made with padding instead and
-   the cross axis is `auto` rather than `hidden` — a scrollbar the student can
-   use is a far better failure than a sliced fraction. */
-.katex-display {
+/* Display math gets room to breathe and scrolls sideways if it is genuinely
+   wider than the column. Unlike KaTeX, an SVG carries its own exact height, so
+   there is nothing to clip vertically and no scrollbar appears here — the
+   `overflow-x` alone is safe. */
+mjx-container[display='true'] {
   margin: 1.1em 0;
-  padding: 0.7em 0;
+  padding: 0.15em 0;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
-/* The rule between numerator and denominator is a `border-bottom-width` of
-   0.04em set inline — about two thirds of a pixel at body size, so at a
-   fractional device pixel ratio it renders as a grey smear or not at all. 0.08em
-   is what KaTeX itself uses for the comparable `.katex-sout` rule. The width is
-   an inline style, so `!important` is the only way to reach it. */
-.katex .mfrac .frac-line {
-  border-bottom-width: 0.08em !important;
+/* A wide equation scrolls rather than stretching the answer column. The SVG
+   scales with the container, so this only bites on genuinely long expressions. */
+mjx-container svg {
+  max-width: 100%;
 }
 
-/* A parse failure renders KaTeX's error markup, which is loud by design: a
-   silent gap would read as a missing answer. */
-.katex-error {
-  color: var(--danger);
+/* A parse failure renders the source in red, which is loud on purpose: a silent
+   gap would read as a missing answer. `!important` because the plugin writes the
+   colour as an inline style, and a literal hex is not one of our tokens. */
+.mathjax-error {
+  color: var(--danger) !important;
   font-family: var(--font-mono);
   font-size: 0.85em;
 }

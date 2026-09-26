@@ -1,10 +1,14 @@
 import { copyFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
 
 const shared = resolve('src/shared')
+
+/** MathJax's own version, for the `PACKAGE_VERSION` define below. */
+const MATHJAX_VERSION: string = createRequire(import.meta.url)('mathjax-full/package.json').version
 
 /**
  * Emits `src/bootstrap.cjs` to `out/bootstrap.cjs`.
@@ -98,7 +102,31 @@ export default defineConfig({
     },
     define: {
       // KaTeX and Mermaid both branch on this to pick browser vs server paths.
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production')
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
+
+      /**
+       * MathJax's version probe, and it is load-bearing rather than cosmetic.
+       *
+       * `mathjax-full/js/components/version.js` reads its own version like this:
+       *
+       *   export const VERSION = typeof PACKAGE_VERSION === 'undefined'
+       *     ? (() => { const load = eval('require'); ... })()
+       *     : PACKAGE_VERSION
+       *
+       * The `eval` branch is a Node path, it is **not** wrapped in try/catch, and
+       * Rollup does not replace `PACKAGE_VERSION` on its own. Left undefined, the
+       * minified comparison `typeof PACKAGE_VERSION > "u"` evaluates true, the
+       * bundle calls `eval`, and the app's CSP — `script-src 'self'`, no
+       * `unsafe-eval` (§12.2) — throws `EvalError` during module evaluation. That
+       * takes down the whole renderer chunk, not just the equations.
+       *
+       * Defining the identifier makes Rollup fold the comparison to false, take
+       * the literal branch, and drop the `eval` as dead code. Verified absent
+       * from the built bundle afterwards.
+       *
+       * The identifier is MathJax's, and nothing else in the tree uses it.
+       */
+      PACKAGE_VERSION: JSON.stringify(MATHJAX_VERSION)
     },
     build: {
       outDir: resolve('out/renderer'),

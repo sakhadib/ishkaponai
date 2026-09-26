@@ -49,6 +49,7 @@ history) so the reasoning stays auditable.
 | D26 | **General shell execution removed; `python` is the only tool** | LOCKED |
 | D27 | **Answer is a human worked example; agent steps behind a Thought toggle** | LOCKED |
 | D28 | **Light-only. No theme setting, no dark palette** | LOCKED |
+| D29 | **Math renderer: MathJax to inline SVG, replacing KaTeX** | LOCKED |
 
 > **D7 is superseded** by the SQLite decision (see amendment table).
 > **D10–D14 are void or moot** as of D26. Their reasoning is retained above, so
@@ -554,7 +555,7 @@ boundary.
 | Renderer store | `zustand` | |
 | Routing | `react-router` | Declarative, in-memory |
 | Markdown | `react-markdown` + `remark-gfm` | |
-| Mathematics | `remark-math` + `rehype-katex` | |
+| Mathematics | ~~`remark-math` + `rehype-katex`~~ | **SUPERSEDED** (D29) — MathJax |
 | Diagrams | `mermaid` | Lazy-loaded |
 | Theming | CSS custom properties | No runtime theming library |
 
@@ -627,6 +628,7 @@ Append new entries below. Do not edit existing decisions in place.
 | 2026-09-26 | **D27** | **New.** The student's answer is a human worked example; the agent's steps (reasoning, Python, raw output, failed attempts) live behind a collapsible "Thought" toggle above it, not inline in the transcript | The agent loop is identify → compute → see results → write answer, so the answer is written *after* the results exist and can be a clean derivation. Showing code inline made a solved problem look like a machine transcript, which is not what a student reads. Evidence is still one click away and still in SQLite, so auditability is unchanged |
 | 2026-09-26 | D14 (revised) | Process hygiene narrowed to the `python` tool: 60 s interruptible timeout, 64 KB output cap, in-memory VFS, reset between sessions | The env-allowlist rationale is superseded by a stronger property: with no child process, the API key is unreachable **by construction** rather than protected by filtering |
 | 2026-09-26 | **D28** | **Light only. Supersedes D8.** `ThemeMode` and `Settings.theme` removed from the contract, the dark palette deleted, the Appearance pane removed, and the `data-theme` mechanism retired | Author's decision. A student reads worked solutions here for minutes at a time, often in a bright classroom, and often prints or screenshots the result — a fixed light surface is the better reading experience and is unambiguous in a shared image. It also removes a whole class of work rather than adding one: no second palette to keep accessible, no first-paint flash to prevent, and no "which theme is this screenshot?" question. The token discipline and the measured-contrast rule from D8 survive; only the switching does not |
+| 2026-09-26 | **D29** | **Math renderer changed from KaTeX to MathJax, rendering to inline SVG in the pipeline.** `rehype-katex` + `katex` removed; `rehype-mathjax` + `mathjax-full` added. Amends D18 | Author's decision, after seeing real answers. KaTeX's metrics read as cramped — symbols too close together to scan — and that is a deliberate difference between the two projects, not a bug that could be tuned away. MathJax is roomier, more forgiving of a malformed expression, and renders the full AMS environment set. The cost is accepted knowingly: a larger renderer bundle and slower typesetting. The author also asked for multi-line equations to be preferred, which the prompt now requires (§11.1.9) — that request is independent of the renderer and would have been worth doing under either one. A real KaTeX defect was found and fixed on the way out (below), and it accounted for the "fraction with no line" symptom; the cramped-spacing complaint is what remained after that, and it is the part that needed a different renderer |
 
 ### D28 — Light only
 
@@ -685,3 +687,77 @@ would have preserved the dark palette "just in case" — at the cost of keeping
 it verified and current, forever, for a mode that ships switched off. A
 half-maintained dark theme is worse than none, because it will look fine in
 review and be wrong in the one place someone checks.
+
+---
+
+## D29 — MathJax, not KaTeX
+
+**Decision.** Mathematics renders through `rehype-mathjax` to **inline SVG**,
+in the Markdown pipeline. `rehype-katex` and `katex` are gone as direct
+dependencies.
+
+**Rationale.** The author's call, made after looking at real answers rather than
+at a demo. Two things were wrong, and it is worth being precise that they were
+*different* things:
+
+- **A real defect, found and fixed first.** KaTeX lays a fraction out by drawing
+  content *outside* the box it computes — `.vlist > span` is `height: 0`, with
+  the numerator moved by `top: -2.3em`. The stylesheet had
+  `overflow-y: hidden` on `.katex-display`, which sliced the numerator off the top
+  and the denominator off the bottom, leaving the rule stranded between the
+  stumps. That was "the numerator and denominator run together and there is no
+  line", and it also explains a tall `align` block losing most of its rows.
+  Fixed in `c12d11b` before the renderer was replaced, and the fix would have
+  been needed under either renderer had KaTeX stayed.
+- **A matter of taste that no setting fixes.** KaTeX sets its symbols tighter
+  than MathJax. That is a deliberate difference between the two projects, not a
+  defect, and no CSS change reverses it. The author found it hard to read.
+
+Also relevant, and the reason a swap rather than a tweak was the right shape:
+KaTeX cannot render `multline` at all, and MathJax is markedly more forgiving of
+a malformed expression, falling back to showing the source rather than to an
+error box.
+
+**The cost, accepted knowingly.** A larger renderer bundle and slower
+typesetting. Measured: the renderer chunk is 2.28 MB minified, a full re-render
+of a twelve-equation answer is 18 ms, and a streaming delta costs 2–6 ms —
+against a 30 ms event coalescing interval, so it is not the bottleneck. The
+per-equation DOM weight is real, at roughly 11 KB each, because
+`fontCache: 'local'` makes every SVG self-contained.
+
+**Why SVG and not CHTML.** CHML is about a third of the size and would cut the
+DOM weight, but it needs a `fontURL` pointing at MathJax's own woff files, which
+under `font-src 'self'` means copying them into the bundle and keeping them in
+step with the MathJax version. SVG needs no font at all and stays sharp when a
+student zooms into an equation. On an offline desktop app, fewer moving parts
+beat smaller output.
+
+**Why the extension list is explicit.** `rehype-mathjax` defaults to
+`AllPackages`, which includes `html` — TeX can then emit raw markup and
+`\href` URLs — and `require`, which can pull in further components at parse time.
+Model output is untrusted (D17), so both are excluded and the list of what is
+loaded is readable in one place. Verified inert rather than assumed: a
+`javascript:` href and an `onerror` image both render as plain text.
+
+**The landmine worth recording.** `mathjax-full/js/components/version.js` reads
+its own version with an `eval('require')` that is **not** wrapped in try/catch,
+and Rollup does not substitute `PACKAGE_VERSION` on its own. Left undefined, the
+minified comparison folds to true, the bundle calls `eval`, and the app's CSP
+(`script-src 'self'`, no `unsafe-eval`) throws `EvalError` during module
+evaluation — taking down the entire renderer chunk rather than just the
+equations. The build emitted no warning beyond Rollup's generic "use of eval is
+discouraged", and a clean build still produced it. Fixed by defining
+`PACKAGE_VERSION` in `electron.vite.config.ts`, which makes the comparison fold
+to false and the `eval` disappear as dead code; verified absent from the bundle
+afterwards. **This is the class of bug that looks correct in every check and
+fails only on load.**
+
+**Rejected: CHTML with copied fonts.** Smaller, and the DOM weight is the one
+genuine cost of SVG. Rejected because it trades a bundle-size win for a font
+pipeline that has to stay correct across MathJax upgrades, under a CSP that makes
+a mistake a blank page.
+
+**Rejected: keeping KaTeX and fixing the prompt alone.** The prompt work is
+right and was done regardless — multi-line `align` over one long chained line,
+`\dfrac` over inline `\frac` — but it cannot widen the glyph metrics. It would
+have left the actual complaint standing.

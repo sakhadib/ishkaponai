@@ -163,6 +163,25 @@
   --measure-chat: 860px;
   --measure-welcome: 680px;
 
+  /**
+   * The composer's own measure, 25% wider than the transcript's.
+   *
+   * A separate token rather than a change to `--measure-chat`, because the
+   * transcript and the composer no longer share a width. The composer is a control
+   * that has to hold a whole problem before it is sent, and at the transcript's
+   * measure a three-part question wrapped before it was finished being thought
+   * out. 1075px is 860 x 1.25, which is 107.5px gained on each side — 12.5% a side,
+   * and `margin: 0 auto` splits the difference exactly.
+   *
+   * The hint line takes the same value, and has to: it sits directly under the
+   * box as its caption, and a caption narrower than what it captions reads as a
+   * mistake. The transcript keeps `--measure-chat`, so the composer now overhangs
+   * the answers above it by 107px a side. That is the visible consequence of
+   * widening one without the other, and it is a decision rather than an oversight:
+   * widening the reading column as well is a one-line change here if it is wanted.
+   */
+  --measure-composer: 1075px;
+
   /* Layout */
   --sidebar-w: 268px;
   --titlebar-h: 38px;
@@ -1383,10 +1402,25 @@ select.field__input {
 .composer__box {
   display: flex;
   gap: var(--space-sm);
-  align-items: flex-end;
-  /* Matches the transcript measure so the input lines up with the answer it
-     sits under. Without this it would span the whole pane. */
-  max-width: var(--measure-chat);
+  max-width: var(--measure-composer);
+  /**
+   * `center`, with the button opting out below.
+   *
+   * The textarea and the button are not the same height, and that difference is
+   * arithmetic rather than taste: `--composer-line` is `--text-md` times
+   * `--leading-normal`, which is 1rem x 1.6 = 25.6px, while the button is a 32px
+   * tap target. Under `flex-end` the shorter textarea was pinned to the button's
+   * bottom edge, leaving 6.4px of dead space *above* the text and pushing it
+   * 3.2px below the middle of the box. The placeholder sat in the same line box,
+   * so it drifted too — which is what "the text looks slightly low" was.
+   *
+   * Centring the textarea fixes that, but on its own it would float the Send
+   * button in the middle of a three-line composer, which is worse. So the button
+   * takes `align-self: flex-end` and keeps sitting beside the last line, and the
+   * two together give the one-line case a centred line of text and the tall case
+   * a bottom-aligned control.
+   */
+  align-items: center;
   margin: 0 auto;
   padding: var(--space-sm);
   border: 1px solid var(--border-strong);
@@ -1425,7 +1459,23 @@ select.field__input {
    * off the screen.
    */
   max-height: calc(7 * var(--composer-line));
-  padding: 0;
+  /**
+   * Left only, and a literal rather than a spacing token.
+   *
+   * The box already has `--space-sm` of padding, but the Send button on the right
+   * balances that visually and there is nothing opposite the text on the left, so
+   * the first character sat hard against the border. 7px is an optical
+   * correction, not a step on the spacing scale, so inventing a token for it
+   * would be worse than writing the number.
+   *
+   * Horizontal padding is what makes this safe to add here. `box-sizing` is
+   * `border-box` and `max-height` includes padding, so a top or bottom value
+   * would eat into the seven-line cap that `Composer.tsx` reads back and
+   * multiplies — the growth arithmetic would silently lose a fraction of a line
+   * per side. Left and right leave the vertical content box untouched, so
+   * `scrollHeight` is still exactly one `--composer-line` per line.
+   */
+  padding: 0 0 0 7px;
   border: none;
   background: none;
   color: var(--text);
@@ -1454,13 +1504,21 @@ select.field__input {
   flex: none;
   height: 32px;
   padding: 0 var(--space-md);
+  /* Opts out of the box's `align-items: center`. See `.composer__box` for why the
+     two heights differ. At one line the button is the taller of the pair, so
+     `flex-end` puts it exactly where `center` would; once the composer grows it
+     is what keeps Send beside the last line instead of floating in the middle. */
+  align-self: flex-end;
   /* Rounder than the default button, so it reads as attached to the box rather
      than as a control sitting in it. */
   border-radius: var(--radius-lg);
 }
 
 .composer__hint {
-  max-width: var(--measure-chat);
+  /* Matches the box, not the transcript. The hint is the box's caption and sits
+     directly under it, so a caption narrower than what it captions reads as a
+     mistake rather than as a choice. */
+  max-width: var(--measure-composer);
   margin: 0 auto var(--space-xs);
   color: var(--text-faint);
   font-size: var(--text-xs);

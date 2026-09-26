@@ -340,8 +340,14 @@ function countFittingFromEnd(projected: readonly number[], keepTokens: number): 
 function estimateTurn(turn: TurnRecord): number {
   let total = estimateTokens(turn.content)
   for (const call of turn.toolCalls ?? []) {
-    // §10.3: a call is summarised by its final result, so the *code* is what
-    // gets dropped. The result must stay for the trail to be auditable.
+    // §10.3: a *compacted* call is summarised by its result, so the code is
+    // what the summary drops. But `projectHistory` replays the code verbatim as
+    // the `tool-call` input, so while the turn is still in the verbatim window it
+    // is costing context whether we like it or not. Counting only the result
+    // under-estimated the window in exactly the direction that gets a request
+    // rejected, and a Python step is not small — it is usually the largest thing
+    // in the turn.
+    total += estimateTokens(call.code)
     total += estimateTokens(`${call.resultValue ?? ''}\n${call.error ?? ''}`)
   }
   return total
@@ -376,7 +382,7 @@ export function projectHistory(
     })
   }
 
-  for (const turn of history) {
+  for (const [turnIndex, turn] of history.entries()) {
     if (turn.role === 'user') {
       messages.push({ role: 'user', content: turn.content })
       continue
@@ -388,9 +394,7 @@ export function projectHistory(
     for (const [index, call] of calls.entries()) {
       content.push({
         type: 'tool-call',
-        // Synthetic ids: the model only needs them to pair a call with its
-        // result, and real provider ids are not available at replay time.
-        toolCallId: replayId(index, call.code),
+        toolCallId: replayId(turnIndex, index),
         toolName: 'python',
         input: JSON.stringify({ code: call.code })
       })
@@ -410,7 +414,7 @@ export function projectHistory(
         content: [
           {
             type: 'tool-result',
-            toolCallId: replayId(index, call.code),
+            toolCallId: replayId(turnIndex, index),
             toolName: 'python',
             // A `text` output rather than `json`: the replayed result is a
             // human-readable transcript of what the step produced, and sending
@@ -437,14 +441,23 @@ function renderToolResult(call: ToolCallRecord): string {
   return lines.join('\n')
 }
 
-/** Stable, short id for a replayed call. Not a security boundary. */
-function replayId(index: number, code: string): string {
-  let hash = 2166136261
-  for (let i = 0; i < code.length; i += 1) {
-    hash ^= code.charCodeAt(i)
-    hash = Math.imul(hash, 16777619)
-  }
-  return `replay-${index}-${(hash >>> 0).toString(36)}`
+/**
+ * Id for a replayed tool call. Must be unique across the **whole** projection.
+ *
+ * This used to hash the call's `code` together with its index *within one
+ * message*, which collided as soon as two turns ran the same snippet — and
+ * running the same snippet is the normal case for a physics conversation, where
+ * `m = 2.5; g = 9.81; m*g` gets recomputed on the next follow-up. Duplicate
+ * `tool_call_id`s in a single request are a protocol violation: providers pair
+ * results to calls by id, so a collision can drop a result or attach it to the
+ * wrong step. It got more likely the longer the conversation ran, which is the
+ * opposite of the behaviour we want.
+ *
+ * Turn index plus call index is unique by construction and still stable for a
+ * given projection. Not a security boundary — the model cannot reach these.
+ */
+function replayId(turnIndex: number, callIndex: number): string {
+  return `replay-${turnIndex}-${callIndex}`
 }
 
 // ---------------------------------------------------------------------------

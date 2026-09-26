@@ -1,9 +1,21 @@
 /**
  * The Markdown pipeline (spec §13.1).
  *
- * `react-markdown` + `remark-gfm` + `remark-math` + `rehype-katex`, plus the
- * local `remarkBengaliNumeralsInMath` plugin that makes `২ + ৩` render as
- * `2 + 3` inside math (spec §13.2).
+ * `react-markdown` + `remark-gfm` + `remark-math` + `rehype-katex`, with two
+ * source-level transforms in front and one plugin alongside:
+ *
+ *  - `normaliseMathSource` rewrites `\[…\]` / `\(…\)` to the dollar delimiters
+ *    `remark-math` understands, wraps bare LaTeX environments, and escapes
+ *    currency so `It costs $5 and $10` is not parsed as inline maths. See
+ *    `lib/mathSource.ts` for why each of those is necessary.
+ *  - `remarkBengaliNumeralsInMath` makes `২ + ৩` render as `2 + 3` inside math
+ *    (spec §13.2).
+ *
+ * KaTeX cannot be made non-throwing through `rehype-katex` — it omits
+ * `throwOnError` from its options and hard-codes `true`. It does, however,
+ * catch its own parse errors and fall back to a `katex-error` span, so a single
+ * malformed expression degrades to visible source instead of taking the
+ * message down with it.
  *
  * Security posture, per spec §12.2 — model output is untrusted:
  *  - `rehype-raw` is deliberately absent, so raw HTML in the source is dropped
@@ -23,6 +35,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import { CodeBlock } from '@/components/CodeBlock'
 import { MermaidBlock } from '@/components/MermaidBlock'
+import { normaliseMathSource } from '@/lib/mathSource'
 import { remarkBengaliNumeralsInMath } from '@/lib/remarkNumerals'
 import type { ReactNode } from 'react'
 
@@ -169,6 +182,11 @@ export function Markdown({ children, className }: MarkdownProps): React.JSX.Elem
   )
   const rehypePlugins = useMemo(() => [rehypeKatex], [])
 
+  // Runs on every streamed delta, so it stays linear and allocation-light. It
+  // short-circuits when the text holds no delimiter at all, which is the common
+  // case for prose-only turns.
+  const source = useMemo(() => normaliseMathSource(children), [children])
+
   return (
     <div className={className === undefined ? 'markdown' : `markdown ${className}`}>
       <ReactMarkdown
@@ -177,7 +195,7 @@ export function Markdown({ children, className }: MarkdownProps): React.JSX.Elem
         components={components}
         urlTransform={safeUrl}
       >
-        {children}
+        {source}
       </ReactMarkdown>
     </div>
   )

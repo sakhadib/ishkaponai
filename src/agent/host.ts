@@ -50,7 +50,7 @@ import {
 } from './context'
 import { createResolver, contextLengthFor, DEFAULT_COMPACTION_MODEL } from './provider'
 import type { ChatModelFactory } from './provider'
-import { DEFAULT_TITLE_MODEL, generateSessionTitle } from './title'
+import { TITLE_MODEL, generateSessionTitle } from './title'
 import { PRELOAD_PACKAGES } from './wheels'
 import { generateText } from 'ai'
 
@@ -209,11 +209,9 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
         return
       case 'settings':
         this.settings = command.settings
-        this.titleModelId = command.settings.titleModelId
         this.log(
           `settings updated: model=${this.settings.modelId ?? '(none)'} ` +
-            `timeout=${this.settings.pythonTimeoutMs}ms maxTokens=${this.settings.maxOutputTokens} ` +
-            `titleModel=${this.titleModelId ?? '(default)'}`
+            `timeout=${this.settings.pythonTimeoutMs}ms maxTokens=${this.settings.maxOutputTokens}`
         )
         return
       case 'reset-interpreter':
@@ -358,12 +356,11 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
     // the session. Re-asking would overwrite their choice.
     if (this.titledSessions.has(command.sessionId)) return
 
-    const modelId = this.titleModelId ?? this.compactionModelOverride ?? DEFAULT_TITLE_MODEL
-
     this.titledSessions.add(command.sessionId)
 
     void generateSessionTitle({
-      model: factory(modelId),
+      // Fixed, not configurable: a title must never cost the student money.
+      model: factory(TITLE_MODEL),
       question: command.text,
       preferredLanguage: command.preferredLanguage
     })
@@ -382,9 +379,6 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
 
   /** Sessions that have been through title generation, so it happens once. */
   private readonly titledSessions = new Set<string>()
-
-  /** Set from settings; `null` means "use the cheap background model". */
-  private titleModelId: string | null = null
 
   // -------------------------------------------------------------------------
   // The turn

@@ -2017,6 +2017,34 @@ select.field__input {
   justify-content: flex-end;
 }
 
+/* An explanatory note inside a pane: states a fixed behaviour rather than
+   offering a control for it. Quieter than a field, because there is nothing to
+   change here. */
+.settings__note {
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+
+.settings__note-line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.settings__note-line strong {
+  color: var(--text);
+}
+
+.settings__note-hint {
+  margin: var(--space-xs) 0 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
 /* --- Settings shell ------------------------------------------------------- */
 
 .settings {

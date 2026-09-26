@@ -8,9 +8,9 @@
  *
  * Deliberately cheap and deliberately separate from the solving turn:
  *
- *  - It runs on its own model (`titleModelId`, else a small default), never on
- *    the model the student chose for problem-solving. Titles are a chore; they
- *    should not cost what an answer costs.
+ *  - It runs on `openrouter/free`, a fixed free router, never on the model the
+ *    student chose for problem-solving. Titles are a chore and must not be the
+ *    reason a turn costs money.
  *  - It is **not awaited** by the turn. The answer is what the student is
  *    waiting for, and a title arriving a second later is fine.
  *  - It never blocks or fails a turn. Any error falls back to the truncated
@@ -23,11 +23,24 @@ import type { LanguageModel } from 'ai'
 import type { LanguagePref } from '@shared/types'
 
 /**
- * Small, fast, and cheap enough to call on every new chat. Mirrors the
- * `DEFAULT_COMPACTION_MODEL` choice in `provider.ts`; overridable per install
- * via the `titleModelId` setting.
+ * The model used for session titles.
+ *
+ * `openrouter/free` is OpenRouter's free-model router: it resolves to whatever
+ * free model is currently available, so this costs the student nothing and
+ * cannot go stale when a free model is retired. It is fixed, with no setting to
+ * override it, for three reasons:
+ *
+ *  - A title is a chore. It must never be the reason a turn costs money, and a
+ *    student-supplied slug here would put that back in their hands by accident.
+ *  - It has no tool-calling requirement, so there is no reason to involve the
+ *    model the student chose for solving problems.
+ *  - One less setting is one less thing to explain and one less way for the
+ *    background path to diverge from the solving path.
+ *
+ * If the router is unavailable the call fails and the truncated-first-message
+ * title stands, so this is a safe dependency to hardcode.
  */
-export const DEFAULT_TITLE_MODEL = 'openai/gpt-4o-mini'
+export const TITLE_MODEL = 'openrouter/free'
 
 /** Longest title we will store. Anything longer is truncated by the model. */
 const MAX_TITLE_CHARS = 60

@@ -7,7 +7,6 @@
 import { useEffect, useState } from 'react'
 import { ModelPicker } from '@/features/settings/ModelPicker'
 import { SettingsPanel } from '@/features/settings/sections/SettingsPanel'
-import { Field } from '@/components/ui'
 import { useSettingsStore } from '@/store/settingsStore'
 
 export function ModelSection(): React.JSX.Element {
@@ -20,7 +19,6 @@ export function ModelSection(): React.JSX.Element {
   const loaded = useSettingsStore((state) => state.loaded)
 
   const [customModel, setCustomModel] = useState('')
-  const [customBackground, setCustomBackground] = useState('')
 
   useEffect(() => {
     if (!loaded) return
@@ -51,30 +49,19 @@ export function ModelSection(): React.JSX.Element {
 
       <div className="settings__divider" role="presentation" />
 
-      <Field
-        label="Model for background tasks"
-        htmlFor="setting-title-model"
-        hint="Session titles and context compaction. A small cheap model is the right choice here — these jobs run on every turn and never need a strong model. Leave empty to use a built-in default."
-      >
-        <input
-          id="setting-title-model"
-          className="field__input"
-          type="text"
-          value={settings.titleModelId ?? ''}
-          placeholder="openai/gpt-4o-mini"
-          spellCheck={false}
-          onChange={(event) => {
-            const value = event.target.value.trim()
-            setCustomBackground(value)
-            // Committed on blur so a half-typed slug is never persisted.
-          }}
-          onBlur={() => {
-            const next = customBackground.trim()
-            if (next === (settings.titleModelId ?? '')) return
-            void update({ titleModelId: next === '' ? null : next })
-          }}
-        />
-      </Field>
+      {/* Background work is fixed, so this states what happens rather than
+          offering a choice. Naming the model is the useful part: a student can
+          see that titling their chats is not being billed to their key. */}
+      <div className="settings__note">
+        <p className="settings__note-line">
+          <strong>Background tasks use OpenRouter’s free router.</strong> Naming a conversation
+          and compacting a long one run on <code>openrouter/free</code>, which is always free.
+        </p>
+        <p className="settings__note-hint">
+          Only the model you choose above is billed. Those jobs are housekeeping — they need no
+          reasoning and no tools, so a strong model would be paying for nothing.
+        </p>
+      </div>
     </SettingsPanel>
   )
 }

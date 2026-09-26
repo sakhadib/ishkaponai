@@ -94,16 +94,13 @@ function normaliseField(key: string, value: unknown): Settings[keyof Settings] {
       if (typeof value !== 'boolean') throw new Error('showThinking must be a boolean.')
       return value
     }
-    case 'titleModelId': {
-      // `null` means "use the cheap default", so null is a valid value here
-      // rather than something to reject.
-      if (value === null) return null
-      if (typeof value !== 'string') throw new Error('titleModelId must be a string or null.')
-      const trimmed = value.trim()
-      if (trimmed === '') return null
-      if (trimmed.length > 200) throw new Error('titleModelId is too long.')
-      return trimmed
-    }
+    case 'titleModelId':
+      // Removed from the contract, but a settings row written before the
+      // removal can still carry it. Rejecting the key would make an entire
+      // settings write fail over a field that no longer exists, so it is
+      // dropped: the background model is fixed in the agent host, so a stale
+      // value in the blob has nothing to act on.
+      throw new Error('titleModelId has been removed')
     default:
       // Unreachable via `Settings`, but the switch is the guard for keys the
       // renderer invented.
@@ -120,8 +117,19 @@ export function parseSettingsPatch(patch: unknown): Partial<Settings> {
 
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue
-    // Every mutation of settings is a deliberate user action.
-    result[key] = normaliseField(key, value)
+    try {
+      // Every mutation of settings is a deliberate user action.
+      result[key] = normaliseField(key, value)
+    } catch (error) {
+      // A key that is retired rather than invalid is dropped instead of
+      // failing the whole patch. The renderer still has a copy of the old
+      // contract until it is restarted, and one stale key must not stop a
+      // student from saving a setting they actually changed.
+      if (error instanceof Error && error.message.startsWith('titleModelId has been removed')) {
+        continue
+      }
+      throw error
+    }
   }
 
   return result as Partial<Settings>

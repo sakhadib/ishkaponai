@@ -105,12 +105,6 @@ export interface Settings {
   pythonTimeoutMs: number
   showThinking: boolean
   maxOutputTokens: number
-  /**
-   * Cheap model used for background chores — session titles and context
-   * compaction — so those never run on the model the student picked for quality.
-   * `null` falls back to that model.
-   */
-  titleModelId: string | null
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -120,8 +114,7 @@ export const DEFAULT_SETTINGS: Settings = {
   userInstructions: '',
   pythonTimeoutMs: 60_000,
   showThinking: true,
-  maxOutputTokens: 2048,
-  titleModelId: null
+  maxOutputTokens: 2048
 }
 
 /**

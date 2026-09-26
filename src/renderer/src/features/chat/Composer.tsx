@@ -1,11 +1,13 @@
 /**
  * The composer. A plain textarea with Enter-to-send and Shift+Enter for a
  * newline, an auto-growing height, and a Stop button while a turn is running.
+ *
+ * The textarea and the button share one bordered box rather than sitting side by
+ * side, so the whole control reads as a single surface — and the focus ring
+ * belongs to the box, which lights up the whole thing rather than one edge of it.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { containsBangla } from '@/lib/format'
-
-const MAX_TEXTAREA_HEIGHT = 220
 
 export interface ComposerProps {
   value: string
@@ -31,14 +33,19 @@ export function Composer({
 }: ComposerProps): React.JSX.Element {
   const textarea = useRef<HTMLTextAreaElement>(null)
 
-  // Grow with the content, up to a cap, then scroll.
+  /**
+   * Grow with the content.
+   *
+   * `height: auto` makes the browser recompute the intrinsic height from the
+   * text. Everything past that is CSS: `max-height` caps it at seven lines and
+   * `overflow-y: auto` scrolls inside it from there. Keeping the cap out of this
+   * file means there is no pixel count here to drift out of step with the
+   * stylesheet, and changing the line limit is a one-line CSS edit.
+   */
   useLayoutEffect(() => {
     const element = textarea.current
     if (element === null) return
     element.style.height = 'auto'
-    const next = Math.min(element.scrollHeight, MAX_TEXTAREA_HEIGHT)
-    element.style.height = `${next}px`
-    element.style.overflowY = element.scrollHeight > MAX_TEXTAREA_HEIGHT ? 'auto' : 'hidden'
   }, [value])
 
   useEffect(() => {
@@ -62,7 +69,7 @@ export function Composer({
   return (
     <div className="composer">
       {hint === null ? null : <p className="composer__hint">{hint}</p>}
-      <div className="composer__row">
+      <div className="composer__box">
         <textarea
           ref={textarea}
           className="composer__input"
@@ -77,7 +84,7 @@ export function Composer({
         {streaming ? (
           <button
             type="button"
-            className="btn btn--stop"
+            className="btn btn--stop composer__send"
             onClick={onStop}
             disabled={stopping}
             title="Stop generating and interrupt any running calculation"
@@ -85,7 +92,12 @@ export function Composer({
             {stopping ? 'Stopping…' : 'Stop'}
           </button>
         ) : (
-          <button type="button" className="btn btn--primary" onClick={onSend} disabled={!canSend}>
+          <button
+            type="button"
+            className="btn btn--primary composer__send"
+            onClick={onSend}
+            disabled={!canSend}
+          >
             Send
           </button>
         )}

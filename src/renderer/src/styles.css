@@ -147,6 +147,14 @@
   --measure-prose: 74ch;
   --measure-tight: 62ch;
 
+  /* Column widths for the chat. The transcript and the docked composer share
+     one value so the input lines up with the text it sits under. The welcome
+     screen is deliberately narrower: it is a single question waiting to be
+     asked, not a page of prose, and matching the transcript's measure would
+     make it read as an empty conversation rather than a start. */
+  --measure-chat: 860px;
+  --measure-welcome: 680px;
+
   /* Layout */
   --sidebar-w: 268px;
   --titlebar-h: 38px;
@@ -860,25 +868,79 @@ select.field__input {
   overflow-y: auto;
 }
 
+/* On the new-session page the transcript is collapsed out of the way entirely
+   and the dock below takes the whole pane. `display: none` rather than
+   `visibility: hidden` or a zero height, because an empty flex child would
+   otherwise still be a scroll target for the wheel. */
+.chat[data-mode='welcome'] .chat__scroll {
+  display: none;
+}
+
 /* The transcript column. Wide enough for a comfortable measure plus the
    occasional wide equation, but capped so lines never run edge to edge. */
 .chat__inner {
   display: flex;
   width: 100%;
-  max-width: 860px;
+  max-width: var(--measure-chat);
   margin: 0 auto;
   padding: var(--space-xl) var(--space-xl) var(--space-sm);
   flex-direction: column;
   gap: var(--space-lg);
 }
 
-.chat__empty {
-  padding: var(--space-sm) 0 var(--space-xl);
-}
-
 .chat__loading {
   color: var(--text-faint);
   font-size: var(--text-sm);
+}
+
+/* Holds the composer, and on the new-session page the greeting above it. Always
+   in the same place in the DOM so the composer is never unmounted. */
+.chat__dock {
+  flex: none;
+}
+
+.chat[data-mode='welcome'] .chat__dock {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-xl);
+}
+
+/* --- New session ---------------------------------------------------------- */
+
+.welcome {
+  width: 100%;
+  max-width: var(--measure-welcome);
+  margin: 0 auto var(--space-2xl);
+  text-align: center;
+}
+
+.welcome__greeting {
+  margin: 0 0 var(--space-sm);
+  color: var(--text);
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+  /* A long name plus a two-word greeting can wrap. `text-wrap: balance` keeps
+     the two lines even instead of leaving a single short one underneath. */
+  text-wrap: balance;
+}
+
+.welcome__prompt {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  text-wrap: balance;
+}
+
+/* The onboarding block replaces the greeting when the app cannot answer yet, so
+   it needs the same centring and measure without inheriting the heading styles. */
+.welcome .onboarding {
+  max-width: none;
 }
 
 /* --- Messages ------------------------------------------------------------- */
@@ -1227,50 +1289,106 @@ select.field__input {
   background: var(--bg);
 }
 
-.composer__row {
-  display: flex;
-  gap: var(--space-md);
-  align-items: flex-end;
-  max-width: 860px;
+/* On the new-session page it is the centre of the screen, not a footer: no rule
+   above it (there is nothing above it to separate from) and no bar behind it
+   (a full-width band across an otherwise empty page reads as a toolbar). */
+.chat[data-mode='welcome'] .composer {
+  width: 100%;
+  max-width: var(--measure-welcome);
   margin: 0 auto;
+  padding: 0;
+  border-top: none;
+  background: none;
 }
 
-.composer__input {
-  min-height: 46px;
-  max-height: 220px;
-  flex: 1;
-  padding: var(--space-md);
+/* The bordered surface. The textarea inside it has no border of its own, so the
+   focus ring belongs here: focusing the composer lights up the whole control
+   rather than one edge, which is the point of putting the button inside. */
+.composer__box {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-end;
+  /* Matches the transcript measure so the input lines up with the answer it
+     sits under. Without this it would span the whole pane. */
+  max-width: var(--measure-chat);
+  margin: 0 auto;
+  padding: var(--space-sm);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* The welcome page is a narrower single question, not a page of prose. */
+.chat[data-mode='welcome'] .composer__box {
+  max-width: none;
+}
+
+.composer__box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.composer__input {
+  /* One line of body text at the answer's size. Every height below is a
+     multiple of it, so the cap is a line count and not a magic number. */
+  --composer-line: calc(var(--text-md) * var(--leading-normal));
+
+  flex: 1;
+  /* Without this a long unbroken string — a URL, or a formula pasted without
+     spaces — refuses to shrink and pushes the button out of the box. */
+  min-width: 0;
+  min-height: var(--composer-line);
+  /* Seven lines, then scroll inside. Long enough for a multi-part problem, short
+     enough that a full composer does not push the conversation off the screen. */
+  max-height: calc(7 * var(--composer-line));
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--text);
   font: inherit;
   font-size: var(--text-md);
   line-height: var(--leading-normal);
-  box-shadow: var(--shadow-sm);
   resize: none;
-  transition: border-color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out);
+  /* Shown only once the content passes `max-height`. The line box is flush with
+     the textarea's edges on purpose — the box's own padding is the inset, and
+     padding here would make the line height and the cap disagree. */
+  overflow-y: auto;
 }
 
 .composer__input::placeholder {
   color: var(--text-faint);
 }
 
+/* The ring is on `.composer__box:focus-within` above, which is a stronger and
+   more visible replacement than an outline on the text field alone. */
 .composer__input:focus-visible {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.composer__send {
+  flex: none;
+  height: 32px;
+  padding: 0 var(--space-md);
+  /* Rounder than the default button, so it reads as attached to the box rather
+     than as a control sitting in it. */
+  border-radius: var(--radius-lg);
 }
 
 .composer__hint {
-  max-width: 860px;
+  max-width: var(--measure-chat);
   margin: 0 auto var(--space-xs);
   color: var(--text-faint);
   font-size: var(--text-xs);
 }
 
-.composer__hint + .composer__row {
-  margin-top: 0;
+.chat[data-mode='welcome'] .composer__hint {
+  max-width: none;
+  /* Sits above the input either way; there is just more room for it on the
+     welcome page, and a hint that crowds the greeting looks like a warning. */
+  margin-bottom: var(--space-sm);
 }
 
 /* --- Onboarding ----------------------------------------------------------- */

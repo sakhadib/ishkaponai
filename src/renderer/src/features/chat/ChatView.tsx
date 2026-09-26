@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { onAgentEvent } from '@/lib/bridge'
 import type { Message, ToolCall } from '@shared/types'
 import { Composer } from '@/features/chat/Composer'
+import { WelcomePane } from '@/features/chat/WelcomePane'
 import {
   ExecutionCard,
   describeFailure,
@@ -31,7 +32,11 @@ import { useUiStore } from '@/store/uiStore'
 import { formatCost, formatTokens, preview } from '@/lib/format'
 
 export interface ChatViewProps {
-  /** Rendered when there is no session and no draft text. */
+  /**
+   * Shown in place of the greeting when the app cannot answer yet — no API key,
+   * or no model chosen. Explaining the product is only useful while the student
+   * cannot start.
+   */
   emptyState: React.ReactNode
 }
 
@@ -63,15 +68,37 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
   const settled = useRef<string | null>(null)
 
   const streamingHere = turn.streaming && turn.sessionId === activeId
-  const hasDraft = draft.trim() !== ''
+
+  const messages: Message[] = detail?.messages ?? []
+
+  /**
+   * The new-session page.
+   *
+   * Note what is *not* here: `draft`. Typing a problem must not make the
+   * greeting disappear out from under a student who is about to send it. The
+   * page holds until the conversation actually starts.
+   */
+  const welcome = messages.length === 0 && !streamingHere
+
+  /**
+   * First run, or the app cannot chat yet. The greeting is suppressed here on
+   * purpose — "Good morning, Nusrat" above a Send button that cannot work is
+   * worse than saying plainly what is missing.
+   */
+  const needsSetup = (secret !== null && !secret.configured) || settings.modelId === null
 
   // Keep the viewport pinned to the newest content, unless the student has
   // deliberately scrolled up to read something.
+  //
+  // `welcome` is in the deps because leaving the new-session page gives the
+  // scroller its height back. The effect that fired on the first message ran
+  // while it was still collapsed, so the scroll would not have taken, and
+  // nothing would change afterwards to make it try again.
   useEffect(() => {
     const element = scroller.current
     if (element === null || !pinnedToBottom.current) return
     element.scrollTop = element.scrollHeight
-  }, [detail, turn.text, turn.reasoning, turn.toolCards, streamingHere])
+  }, [detail, turn.text, turn.reasoning, turn.toolCards, streamingHere, welcome])
 
   const onScroll = useCallback(() => {
     const element = scroller.current
@@ -198,9 +225,6 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
     return map
   }, [detail?.toolCalls])
 
-  const messages: Message[] = detail?.messages ?? []
-  const isEmpty = messages.length === 0 && !hasDraft && !streamingHere
-
   // Sorted once, then split: the cards go inside the Thought toggle, and the
   // failures are summarised there rather than rendered as steps.
   const liveOrdered = useMemo(() => {
@@ -245,11 +269,9 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
   }, [activeId, applyGeneratedTitle, onAgentEvent])
 
   return (
-    <div className="chat">
+    <div className="chat" data-mode={welcome ? 'welcome' : 'chat'}>
       <div className="chat__scroll" ref={scroller} onScroll={onScroll}>
         <div className="chat__inner">
-          {isEmpty ? <div className="chat__empty">{emptyState}</div> : null}
-
           {loadingDetail && messages.length === 0 ? (
             <p className="chat__loading">Loading conversation…</p>
           ) : null}
@@ -317,16 +339,34 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
         </div>
       </div>
 
-      <Composer
-        value={draft}
-        onChange={setDraft}
-        onSend={onSend}
-        onStop={onStop}
-        streaming={streamingHere}
-        stopping={turn.phase === 'stopping'}
-        blockedReason={blockedReason}
-        autoFocus
-      />
+      {/*
+        One dock, always in the same place in the tree. The welcome page only
+        changes how this is laid out — the composer is never unmounted, so the
+        focus and the half-typed draft survive moving from the centre of an
+        empty screen to the bottom of a transcript.
+      */}
+      <div className="chat__dock">
+        {welcome ? (
+          needsSetup ? (
+            <div className="welcome">
+              {emptyState}
+            </div>
+          ) : (
+            <WelcomePane name={settings.studentName} />
+          )
+        ) : null}
+
+        <Composer
+          value={draft}
+          onChange={setDraft}
+          onSend={onSend}
+          onStop={onStop}
+          streaming={streamingHere}
+          stopping={turn.phase === 'stopping'}
+          blockedReason={blockedReason}
+          autoFocus
+        />
+      </div>
     </div>
   )
 }

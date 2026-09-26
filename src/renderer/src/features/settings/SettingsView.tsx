@@ -1,341 +1,199 @@
 /**
- * The Settings view (spec §9.1, §11).
+ * The Settings modal.
  *
- * Every persisted key in the contract is editable here, plus the API key, the
- * model catalog, and the "view exact payload" transparency panel.
+ * Settings used to be one long scrolling page: an API key, a model picker, four
+ * unrelated groups of fields, a payload inspector and a session readout, all
+ * stacked. Nothing about that signalled which settings belong together, and the
+ * student had to scroll past everything to reach the one thing they came for.
+ *
+ * This splits it into a modal with a left menu and one pane per concern. The
+ * grouping is by *task*, not by data type: everything about connecting to a
+ * model is in one place, everything about how answers read in another.
+ *
+ * Behaviour that matters for a modal:
+ *  - Escape closes it, and so does the backdrop.
+ *  - Focus moves into the dialog on open and is trapped while it is open, so a
+ *    keyboard user cannot tab into the chat behind it.
+ *  - The previously focused element is restored on close, so closing Settings
+ *    returns the student to where they were rather than to the document body.
  */
-import { useEffect, useMemo, useState } from 'react'
-import type { LanguagePref, ThemeMode } from '@shared/types'
-import { ApiKeyPanel } from '@/features/settings/ApiKeyPanel'
-import { ModelPicker } from '@/features/settings/ModelPicker'
-import { Field } from '@/components/ui'
-import { useSettingsStore, resolvedTheme } from '@/store/settingsStore'
-import { useSessionStore } from '@/store/sessionStore'
-import { useUiStore } from '@/store/uiStore'
-import { formatDateTime, formatSeconds, parseMilliseconds } from '@/lib/format'
-import { useTurnStore } from '@/store/turnStore'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { IconName } from '@/components/Icon'
+import { Icon } from '@/components/Icon'
+import { AccountSection } from '@/features/settings/sections/AccountSection'
+import { ModelSection } from '@/features/settings/sections/ModelSection'
+import { AppearanceSection } from '@/features/settings/sections/AppearanceSection'
+import { AnswersSection } from '@/features/settings/sections/AnswersSection'
+import { CalculationSection } from '@/features/settings/sections/CalculationSection'
+import { PromptSection } from '@/features/settings/sections/PromptSection'
+import { useSettingsStore } from '@/store/settingsStore'
 
-const THEMES: ReadonlyArray<{ value: ThemeMode; label: string }> = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'Follow the system' }
-]
+export const SETTINGS_SECTIONS = [
+  { id: 'account', label: 'Account', icon: 'key', blurb: 'Your OpenRouter API key' },
+  { id: 'model', label: 'Model', icon: 'sparkle', blurb: 'Which model answers' },
+  { id: 'answers', label: 'Answers', icon: 'text', blurb: 'Language and instructions' },
+  { id: 'calculation', label: 'Calculation', icon: 'calculator', blurb: 'Limits and timeouts' },
+  { id: 'appearance', label: 'Appearance', icon: 'sun', blurb: 'Theme and detail' },
+  { id: 'prompt', label: 'Prompt', icon: 'eye', blurb: 'Exactly what is sent' }
+] as const satisfies ReadonlyArray<{ id: string; label: string; icon: IconName; blurb: string }>
 
-const LANGUAGES: ReadonlyArray<{ value: LanguagePref; label: string }> = [
-  { value: 'auto', label: "Match my message (auto)" },
-  { value: 'en', label: 'English' },
-  { value: 'bn', label: 'বাংলা (Bangla)' }
-]
+export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]['id']
 
-export function SettingsView(): React.JSX.Element {
-  const settings = useSettingsStore((state) => state.settings)
-  const update = useSettingsStore((state) => state.update)
-  const models = useSettingsStore((state) => state.models)
-  const modelsLoading = useSettingsStore((state) => state.modelsLoading)
-  const modelsNotice = useSettingsStore((state) => state.modelsNotice)
-  const loadModels = useSettingsStore((state) => state.loadModels)
-  const loaded = useSettingsStore((state) => state.loaded)
+const SECTION_COMPONENTS: Record<SettingsSectionId, () => React.JSX.Element> = {
+  account: AccountSection,
+  model: ModelSection,
+  answers: AnswersSection,
+  calculation: CalculationSection,
+  appearance: AppearanceSection,
+  prompt: PromptSection
+}
+
+export interface SettingsViewProps {
+  onClose: () => void
+}
+
+export function SettingsView({ onClose }: SettingsViewProps): React.JSX.Element {
+  // A section that depends on setup state is opened first, so the student lands
+  // on the thing that is actually blocking them rather than on Appearance.
+  const [active, setActive] = useState<SettingsSectionId>(() => initialSection())
+
+  const dialog = useRef<HTMLDivElement>(null)
+  const restoreFocusTo = useRef<Element | null>(null)
+
   const error = useSettingsStore((state) => state.error)
   const clearError = useSettingsStore((state) => state.clearError)
 
-  const activeSession = useSessionStore((state) => state.detail?.session ?? null)
-  const setView = useUiStore((state) => state.setView)
-  const systemPrefersDark = useUiStore((state) => state.systemPrefersDark)
-  const summary = useTurnStore((state) => state.summary)
-
-  const [customModel, setCustomModel] = useState('')
-  const [timeout, setTimeoutText] = useState(formatSeconds(settings.pythonTimeoutMs))
-  const [maxTokens, setMaxTokensText] = useState(String(settings.maxOutputTokens))
-
   useEffect(() => {
-    if (!loaded) return
-    void loadModels()
-  }, [loaded, loadModels])
+    restoreFocusTo.current = document.activeElement
+    dialog.current?.focus()
+    return () => {
+      const target = restoreFocusTo.current
+      if (target instanceof HTMLElement) target.focus()
+    }
+  }, [])
 
-  // Keep the numeric fields in step when settings change elsewhere (e.g. the
-  // default was migrated) without stomping on what the student is typing.
+  // Escape closes. The confirm dialog handles its own Escape, and stopping
+  // propagation here would break it, so only handle it when no dialog is open.
   useEffect(() => {
-    setTimeoutText(formatSeconds(settings.pythonTimeoutMs))
-  }, [settings.pythonTimeoutMs])
-  useEffect(() => {
-    setMaxTokensText(String(settings.maxOutputTokens))
-  }, [settings.maxOutputTokens])
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
-  const themeNow = useMemo(
-    () => resolvedTheme(settings, systemPrefersDark),
-    [settings, systemPrefersDark]
+  const onNavKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End']
+      if (!keys.includes(event.key)) return
+      event.preventDefault()
+
+      const index = SETTINGS_SECTIONS.findIndex((section) => section.id === active)
+      const last = SETTINGS_SECTIONS.length - 1
+      const next =
+        event.key === 'Home' ? 0
+        : event.key === 'End' ? last
+        : event.key === 'ArrowDown' ? Math.min(last, index + 1)
+        : Math.max(0, index - 1)
+
+      const target = SETTINGS_SECTIONS[next]
+      if (target === undefined) return
+      setActive(target.id)
+      // Keep focus on the menu, so arrowing again moves the selection rather
+      // than dumping the student into the pane they are navigating to.
+      document.getElementById(`settings-nav-${target.id}`)?.focus()
+    },
+    [active]
   )
 
-  const commitTimeout = (): void => {
-    const ms = parseMilliseconds(timeout)
-    if (ms === null) {
-      setTimeoutText(formatSeconds(settings.pythonTimeoutMs))
-      return
-    }
-    // The host enforces the timeout, so an absurd value is a self-inflicted
-    // hang. Clamp to a range that is still useful.
-    void update({ pythonTimeoutMs: Math.min(Math.max(ms, 1_000), 600_000) })
-  }
-
-  const commitMaxTokens = (): void => {
-    const parsed = Number(maxTokens.trim())
-    if (!Number.isFinite(parsed) || parsed < 128) {
-      setMaxTokensText(String(settings.maxOutputTokens))
-      return
-    }
-    void update({ maxOutputTokens: Math.min(Math.round(parsed), 32_000) })
-  }
-
-  const runningSummary = activeSession?.summary ?? summary
+  const Panel = SECTION_COMPONENTS[active]
 
   return (
-    <div className="settings">
-      <header className="settings__head">
-        <h1 className="settings__title">Settings</h1>
-        <button type="button" className="btn btn--ghost" onClick={() => setView('chat')}>
-          Back to chat
-        </button>
-      </header>
+    <div className="modal-backdrop" onPointerDown={onClose}>
+      <div
+        className="modal modal--wide settings"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        tabIndex={-1}
+        ref={dialog}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        {/* Left menu. A nav landmark with roving arrow-key navigation, which is
+            what a tablist of panes is; the panels themselves are plain
+            regions because only one is ever mounted. */}
+        <nav className="settings__nav" aria-label="Settings sections" onKeyDown={onNavKeyDown}>
+          <div className="settings__nav-head">
+            <h2 className="settings__nav-title">Settings</h2>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={onClose}
+              title="Close settings"
+              aria-label="Close settings"
+            >
+              <Icon name="close" size={15} />
+            </button>
+          </div>
 
-      {error === null ? null : (
-        <div className="banner banner--error" role="alert">
-          {error}
-          <button type="button" className="banner__close" onClick={clearError} aria-label="Dismiss">
-            ×
-          </button>
-        </div>
-      )}
+          <ul className="settings__nav-list" role="list">
+            {SETTINGS_SECTIONS.map((section) => {
+              const selected = section.id === active
+              return (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    id={`settings-nav-${section.id}`}
+                    className="settings__nav-item"
+                    data-selected={selected}
+                    aria-current={selected ? 'page' : undefined}
+                    onClick={() => setActive(section.id)}
+                  >
+                    <Icon name={section.icon} className="settings__nav-icon" />
+                    <span className="settings__nav-text">
+                      <span className="settings__nav-label">{section.label}</span>
+                      <span className="settings__nav-blurb">{section.blurb}</span>
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
 
-      <ApiKeyPanel />
-
-      <section className="settings__section">
-        <h2 className="settings__heading">Model</h2>
-        <p className="settings__body">
-          A tool-calling model is required, because ISHKAPON cannot compute anything without it.
-        </p>
-        <ModelPicker
-          models={models}
-          selectedId={settings.modelId}
-          loading={modelsLoading}
-          notice={modelsNotice}
-          onSelect={(id) => void update({ modelId: id })}
-          onRefresh={() => void loadModels(true)}
-          customId={customModel}
-          onCustomChange={setCustomModel}
-          onCustomCommit={() => {
-            const id = customModel.trim()
-            if (id === '') return
-            setCustomModel('')
-            void update({ modelId: id })
-          }}
-        />
-      </section>
-
-      <section className="settings__section">
-        <h2 className="settings__heading">Appearance</h2>
-        <Field
-          label={`Theme — currently ${themeNow}`}
-          htmlFor="setting-theme"
-          hint="The native window title bar follows this too."
-        >
-          <select
-            id="setting-theme"
-            className="field__input"
-            value={settings.theme}
-            onChange={(event) => void update({ theme: event.target.value as ThemeMode })}
-          >
-            {THEMES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={settings.showThinking}
-            onChange={(event) => void update({ showThinking: event.target.checked })}
-          />
-          <span>
-            Show the model's thinking
-            <span className="switch__hint">
-              The reasoning trace appears above each answer in a collapsible block.
-            </span>
-          </span>
-        </label>
-      </section>
-
-      <section className="settings__section">
-        <h2 className="settings__heading">Answers</h2>
-        <Field
-          label="Preferred language"
-          htmlFor="setting-language"
-          hint="Mathematics always stays in Latin script, in either language."
-        >
-          <select
-            id="setting-language"
-            className="field__input"
-            value={settings.preferredLanguage}
-            onChange={(event) => void update({ preferredLanguage: event.target.value as LanguagePref })}
-          >
-            {LANGUAGES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field
-          label="Extra instructions for ISHKAPON"
-          htmlFor="setting-user-instructions"
-          hint="Added as the second layer of the system prompt. Use it for preferences such as “always use SI units”, not for problems."
-        >
-          <textarea
-            id="setting-user-instructions"
-            className="field__input field__input--area"
-            rows={4}
-            value={settings.userInstructions}
-            onChange={(event) => void update({ userInstructions: event.target.value })}
-          />
-        </Field>
-      </section>
-
-      <section className="settings__section">
-        <h2 className="settings__heading">Calculation</h2>
-        <Field
-          label="Python timeout (seconds)"
-          htmlFor="setting-timeout"
-          hint="How long a single calculation may run before it is killed. Defaults to 60 s."
-        >
-          <input
-            id="setting-timeout"
-            className="field__input"
-            type="number"
-            min={1}
-            max={600}
-            step={1}
-            value={timeout}
-            onChange={(event) => setTimeoutText(event.target.value)}
-            onBlur={commitTimeout}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') commitTimeout()
-            }}
-          />
-        </Field>
-
-        <Field
-          label="Maximum answer length (tokens)"
-          htmlFor="setting-max-tokens"
-          hint="Reserved output budget per turn. A small context model needs this kept low to leave room for the conversation."
-        >
-          <input
-            id="setting-max-tokens"
-            className="field__input"
-            type="number"
-            min={128}
-            max={32000}
-            step={128}
-            value={maxTokens}
-            onChange={(event) => setMaxTokensText(event.target.value)}
-            onBlur={commitMaxTokens}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') commitMaxTokens()
-            }}
-          />
-        </Field>
-      </section>
-
-      <SystemPayloadPanel instructions={settings.userInstructions} />
-
-      {activeSession === null ? null : (
-        <section className="settings__section">
-          <h2 className="settings__heading">This conversation</h2>
-          <dl className="stats">
-            <div className="stats__row">
-              <dt className="stats__label">Created</dt>
-              <dd className="stats__value">{formatDateTime(activeSession.createdAt)}</dd>
+        <section className="settings__panel" aria-label="Settings panel">
+          {error === null ? null : (
+            <div className="banner banner--error" role="alert">
+              {error}
+              <button
+                type="button"
+                className="banner__close"
+                onClick={clearError}
+                aria-label="Dismiss"
+              >
+                <Icon name="close" size={14} />
+              </button>
             </div>
-            <div className="stats__row">
-              <dt className="stats__label">Last activity</dt>
-              <dd className="stats__value">{formatDateTime(activeSession.updatedAt)}</dd>
-            </div>
-            <div className="stats__row">
-              <dt className="stats__label">Model at creation</dt>
-              <dd className="stats__value">{activeSession.modelId ?? '—'}</dd>
-            </div>
-            <div className="stats__row">
-              <dt className="stats__label">Summary covers message</dt>
-              <dd className="stats__value">{activeSession.summaryUpToSeq}</dd>
-            </div>
-          </dl>
+          )}
 
-          <details className="summary-viewer">
-            <summary className="summary-viewer__summary">
-              Running summary{' '}
-              {runningSummary === null || runningSummary === '' ? '(none yet)' : ''}
-            </summary>
-            {runningSummary === null || runningSummary === '' ? (
-              <p className="settings__body">
-                This conversation has not been compacted, so the whole transcript is sent in full.
-              </p>
-            ) : (
-              <pre className="summary-viewer__body">{runningSummary}</pre>
-            )}
-          </details>
+          <Panel />
         </section>
-      )}
+      </div>
     </div>
   )
 }
 
 /**
- * "View exact payload" (spec §11).
- *
- * The contract does not expose the composed system prompt — there is no
- * `getSystemPrompt` on `IshkaponApi` — so the payload cannot be shown
- * verbatim. Rather than invent a bridge method or fake the content, this panel
- * states what is known and what is missing. Layer 2 is the one layer the
- * renderer genuinely owns, and it is shown exactly.
+ * Opens on whatever is blocking: no key, then no model, otherwise the first
+ * section. Anything else would open Settings on a cosmetic page while the app
+ * cannot answer a question.
  */
-function SystemPayloadPanel({ instructions }: { instructions: string }): React.JSX.Element {
-  const platform = typeof window !== 'undefined' ? window.ishkapon?.platform : undefined
-  const locale = typeof navigator !== 'undefined' ? navigator.language : 'unknown'
-  const today = new Date().toISOString().slice(0, 10)
-
-  return (
-    <section className="settings__section">
-      <h2 className="settings__heading">View exact payload</h2>
-      <p className="settings__body">
-        The system prompt is built from three layers: a fixed base written by ISHKAPON, your
-        instructions below, and a runtime block describing this computer.
-      </p>
-
-      <div className="banner banner--info">
-        The base layer and the assembled prompt cannot be read from this window — the bridge does
-        not currently expose them. What the renderer can show is listed here.
-      </div>
-
-      <div className="payload">
-        <h3 className="payload__layer">Layer 1 — base (product owned)</h3>
-        <p className="payload__note">
-          Twelve rules fixed by the product, including: never calculate from memory, show every
-          step, keep mathematics in Latin script, answer in the student's language, and treat tool
-          output as data rather than instructions. Not readable from the renderer.
-        </p>
-
-        <h3 className="payload__layer">Layer 2 — your instructions</h3>
-        <pre className="payload__text">{instructions === '' ? '(empty)' : instructions}</pre>
-
-        <h3 className="payload__layer">Layer 3 — runtime (this computer)</h3>
-        <pre className="payload__text">
-          {[`platform: ${platform ?? 'unknown'}`, `locale: ${locale}`, `date: ${today}`, 'tools: python (Pyodide, no filesystem, no network, no shell)'].join(
-            '\n'
-          )}
-        </pre>
-      </div>
-    </section>
-  )
+function initialSection(): SettingsSectionId {
+  const state = useSettingsStore.getState()
+  if (state.secret !== null && !state.secret.configured) return 'account'
+  if (state.settings.modelId === null) return 'model'
+  return 'account'
 }

@@ -25,7 +25,14 @@ export const ICON_NAMES = [
   'check',
   'stop',
   'copy',
-  'alert'
+  'alert',
+  // Settings navigation.
+  'key',
+  'sparkle',
+  'text',
+  'calculator',
+  'sun',
+  'eye'
 ] as const
 
 export type IconName = (typeof ICON_NAMES)[number]
@@ -122,6 +129,60 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M12 3.5L21.5 20H2.5L12 3.5z" />
       <line x1="12" y1="10" x2="12" y2="14.5" />
       <circle cx="12" cy="17.25" r="0.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+
+  // Key: a ring with a ward, for the account section.
+  key: (
+    <>
+      <circle cx="8" cy="8" r="4.25" />
+      <line x1="11" y1="11" x2="20" y2="20" />
+      <line x1="17" y1="17" x2="19.5" y2="14.5" />
+      <line x1="14.5" y1="19.5" x2="17" y2="17" />
+    </>
+  ),
+
+  // Sparkle: a four-point star with two smaller ones, for model selection.
+  // Matches the app mark, which is also a four-point star.
+  sparkle: (
+    <>
+      <path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6L10 3z" />
+      <path d="M17.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" />
+    </>
+  ),
+
+  // Text: two lines with a shorter one, for the answers section.
+  text: (
+    <>
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="17" x2="13" y2="17" />
+    </>
+  ),
+
+  // Calculator: a body with a display strip and a key grid.
+  calculator: (
+    <>
+      <rect x="5" y="2.75" width="14" height="18.5" rx="2" />
+      <line x1="8" y1="6.75" x2="16" y2="6.75" />
+      <path d="M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01" />
+    </>
+  ),
+
+  // Sun: a ring with rays, for appearance.
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4.25" />
+      <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5" />
+      <path d="M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8" />
+    </>
+  ),
+
+  // Eye: the standard "inspect" mark, for viewing the exact payload.
+  eye: (
+    <>
+      <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="2.75" />
     </>
   )
 }

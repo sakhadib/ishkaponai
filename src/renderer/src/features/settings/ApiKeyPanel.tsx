@@ -46,8 +46,9 @@ export function ApiKeyPanel(): React.JSX.Element {
   }
 
   return (
-    <section className="settings__section">
-      <h2 className="settings__heading">OpenRouter API key</h2>
+    // No heading of its own: the Account pane already has the title and the
+    // description, and a second one here would repeat them.
+    <section className="settings__group">
 
       {insecure ? (
         <div className="banner banner--warn" role="alert">

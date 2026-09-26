@@ -86,17 +86,9 @@ export default function App(): React.JSX.Element {
     }
   }, [modelId, notify, secretLoaded, setView, settingsLoaded])
 
-  // --- Keyboard shortcuts ---------------------------------------------------
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
-      // Escape leaves Settings for the chat; a confirm dialog handles its own.
-      if (useUiStore.getState().confirm !== null) return
-      if (useUiStore.getState().view === 'settings') setView('chat')
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [setView])
+  // Escape is handled by whichever dialog is open — Settings if it is, the
+  // confirm dialog if it is. It used to be handled here as well, which meant two
+  // listeners racing to close the same thing.
 
   const showSidebar = true
 
@@ -104,17 +96,19 @@ export default function App(): React.JSX.Element {
     <div className="app">
       {showSidebar ? <Sidebar /> : null}
 
+      {/* Settings is a modal over the chat rather than a replacement for it, so
+          closing it returns the student to the conversation they were in
+          instead of an empty pane. The chat stays mounted underneath, which also
+          means an in-flight turn keeps streaming while Settings is open. */}
       <main className="app__main">
-        {view === 'settings' ? (
-          <SettingsView />
-        ) : (
-          <ChatView
-            emptyState={
-              <Onboarding compact={activeId !== null || sessions.length > 0} />
-            }
-          />
-        )}
+        <ChatView
+          emptyState={
+            <Onboarding compact={activeId !== null || sessions.length > 0} />
+          }
+        />
       </main>
+
+      {view === 'settings' ? <SettingsView onClose={() => setView('chat')} /> : null}
 
       <NoticeStack />
       <ConfirmDialog />

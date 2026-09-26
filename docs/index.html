@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>ISHKAPON AI — Physics, Chemistry &amp; Maths Solver</title>
+<meta name="description" content="A free desktop app that solves physics, chemistry and maths problems and shows its working. Every number is computed by a real Python interpreter on your own computer, never recalled by the AI. Windows installer, MIT licensed.">
+<meta name="keywords" content="AI problem solver, physics problem solver, chemistry problem solver, mathematics solver, study app for students, step by step solutions, offline AI, Pyodide, SymPy, Electron app, বাংলা, Bangla">
+<meta name="author" content="ISHKAPON">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="theme-color" content="#fafafc">
+<link rel="canonical" href="https://sakhadib.github.io/ishkaponai/">
+
+<!-- Open Graph. This is what a link looks like when shared on WhatsApp or Facebook,
+     which for this audience is how it will mostly spread. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ISHKAPON AI">
+<meta property="og:title" content="ISHKAPON AI — the problem solver that shows its working">
+<meta property="og:description" content="Ask a physics, chemistry or maths question. ISHKAPON works it out step by step and every number is actually calculated by Python on your own computer. Free, open source, Windows.">
+<meta property="og:url" content="https://sakhadib.github.io/ishkaponai/">
+<meta property="og:image" content="https://sakhadib.github.io/ishkaponai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The ISHKAPON AI logo: a lowercase i inside an orbiting ring, with a sphere above and a code tile to the side.">
+<meta property="og:locale" content="en_GB">
+
+<!-- Twitter/X uses the same card, falling back to the large summary image. -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ISHKAPON AI — the problem solver that shows its working">
+<meta name="twitter:description" content="Every number in every answer is calculated by Python on your own computer, not recalled by the AI. Physics, chemistry and maths. Free and open source.">
+<meta name="twitter:image" content="https://sakhadib.github.io/ishkaponai/og.png">
+<meta name="twitter:image:alt" content="The ISHKAPON AI logo.">
+
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="favicon.png">
+<link rel="sitemap" type="application/xml" href="sitemap.xml">
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<!-- Structured data. SoftwareApplication is the schema that matches what this is,
+     and it is what makes the app eligible for richer results rather than a bare
+     blue link. Nothing here is invented: version, licence, platform and the
+     download URL are all real. There is deliberately no aggregateRating, because
+     there are no ratings. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ISHKAPON AI",
+  "alternateName": "ISHKAPON",
+  "description": "A desktop problem solver for physics, chemistry and mathematics that works out each problem step by step. Every number it reports is computed by a real Python interpreter running on the user's own computer rather than recalled by the language model, and the code that produced it is shown alongside the answer.",
+  "url": "https://sakhadib.github.io/ishkaponai/",
+  "applicationCategory": "EducationalApplication",
+  "applicationSubCategory": "Science and mathematics",
+  "operatingSystem": "Windows 10, Windows 11",
+  "softwareVersion": "1.0.0",
+  "downloadUrl": "https://github.com/sakhadib/ishkaponai/releases/download/v1.0.0/ISHKAPON.AI-1.0.0-x64-setup.msi",
+  "installUrl": "https://github.com/sakhadib/ishkaponai/releases/download/v1.0.0/ISHKAPON.AI-1.0.0-x64-setup.msi",
+  "softwareRequirements": "Windows 10 or newer; no administrator rights needed",
+  "memoryRequirements": "2 GB",
+  "license": "https://github.com/sakhadib/ishkaponai/blob/main/LICENSE",
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "ISHKAPON",
+    "url": "https://github.com/sakhadib"
+  },
+  "codeRepository": "https://github.com/sakhadib/ishkaponai",
+  "releaseNotes": "https://github.com/sakhadib/ishkaponai/releases/tag/v1.0.0",
+  "featureList": [
+    "Step-by-step worked solutions for physics, chemistry and mathematics",
+    "Answers in Bangla or English, with all numbers and equations in Latin script",
+    "Every number computed by a sandboxed Python runtime, not recalled by the model",
+    "SymPy, NumPy and mpmath bundled; no internet needed to calculate",
+    "Bring your own OpenRouter API key, or use the free model router",
+    "Chats stored locally on your own computer"
+  ],
+  "keywords": "physics, chemistry, mathematics, problem solver, study app, AI, SymPy, Pyodide, student, offline"
+}
+</script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+<!-- Skip link: keyboard users land here first, and it is invisible until focused. -->
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-indigo-700 focus:shadow-lg">Skip to content</a>
+
+<header class="mx-auto flex max-w-3xl items-center justify-between px-6 py-8">
+  <a href="/" class="flex items-center gap-3">
+    <img src="favicon.png" alt="" width="32" height="32" class="h-8 w-8">
+    <span class="text-sm font-semibold tracking-tight text-slate-900">ISHKAPON AI</span>
+  </a>
+  <nav aria-label="Main" class="flex items-center gap-6 text-sm text-slate-600">
+    <a href="#install" class="transition hover:text-indigo-700">Install</a>
+    <a href="#how" class="transition hover:text-indigo-700">How it works</a>
+    <a href="https://github.com/sakhadib/ishkaponai" class="transition hover:text-indigo-700">Source</a>
+  </nav>
+</header>
+
+<main id="main" class="mx-auto max-w-3xl px-6">
+
+  <!-- Hero -->
+  <section class="pb-24 pt-16 sm:pt-24">
+    <h1 class="text-4xl font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+      The problem solver that shows its working.
+    </h1>
+
+    <p class="mt-8 text-lg leading-relaxed text-slate-700 sm:text-xl sm:leading-loose">
+      Ask a physics, chemistry or maths question. ISHKAPON works it out step by step,
+      in Bangla or English — and every number in the answer is genuinely
+      <em>calculated</em> by a real Python interpreter running on your own computer.
+      Not guessed. Not recalled.
+    </p>
+
+    <p class="mt-6 text-lg leading-loose text-slate-600">
+      A language model asked to do arithmetic in its head will sometimes invent a
+      plausible-looking number. Asked to run <code class="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-900">4.7 × 8.2</code>
+      in Python, it cannot. That is the whole idea.
+    </p>
+
+    <div class="mt-12 flex flex-col gap-4 sm:flex-row sm:items-center">
+      <a href="#install"
+         class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2">
+        Download for Windows
+      </a>
+      <a href="https://github.com/sakhadib/ishkaponai/releases/tag/v1.0.0"
+         class="inline-flex items-center justify-center rounded-xl px-7 py-3.5 text-base font-medium text-slate-700 transition hover:text-indigo-700">
+        Release notes →
+      </a>
+    </div>
+
+    <p class="mt-6 text-sm text-slate-500">
+      Version 1.0.0 · Free and open source (MIT) · No account needed
+    </p>
+  </section>
+
+  <!-- Install -->
+  <section id="install" class="scroll-mt-8 border-t border-slate-200 py-24">
+    <h2 class="text-3xl font-bold tracking-tight text-slate-900">Install</h2>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      Windows only, for now. Choose the file that matches your computer:
+    </p>
+
+    <div class="mt-10 space-y-5">
+
+      <a href="https://github.com/sakhadib/ishkaponai/releases/download/v1.0.0/ISHKAPON.AI-1.0.0-x64-setup.msi"
+         class="group block rounded-2xl border border-slate-200 bg-white p-7 transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2">
+        <span class="block text-lg font-semibold text-slate-900 group-hover:text-indigo-700">
+          Download for Intel / AMD Windows
+        </span>
+        <span class="mt-1.5 block text-slate-600">
+          Almost every Windows laptop and desktop. <span class="text-slate-400">143 MB · x64</span>
+        </span>
+      </a>
+
+      <a href="https://github.com/sakhadib/ishkaponai/releases/download/v1.0.0/ISHKAPON.AI-1.0.0-arm64-setup.msi"
+         class="group block rounded-2xl border border-slate-200 bg-white p-7 transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2">
+        <span class="block text-lg font-semibold text-slate-900 group-hover:text-indigo-700">
+          Download for ARM Windows
+        </span>
+        <span class="mt-1.5 block text-slate-600">
+          Snapdragon and other ARM laptops. <span class="text-slate-400">138 MB · arm64</span>
+        </span>
+      </a>
+
+    </div>
+
+    <p class="mt-6 text-sm leading-relaxed text-slate-500">
+      Not sure which? <strong class="font-medium text-slate-700">Settings → System →
+      About → System type.</strong> If it says “x64-based”, take the first one.
+    </p>
+
+    <h3 class="mt-16 text-xl font-semibold tracking-tight text-slate-900">Then</h3>
+
+    <ol class="mt-6 space-y-4 text-lg leading-loose text-slate-700">
+      <li class="flex gap-4">
+        <span class="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">1</span>
+        <span>Double-click the downloaded <code class="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-900">.msi</code> and click <strong class="font-medium text-slate-900">Install</strong>. You do not need administrator rights.</span>
+      </li>
+      <li class="flex gap-4">
+        <span class="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">2</span>
+        <span>Open ISHKAPON AI from your Start menu or desktop.</span>
+      </li>
+      <li class="flex gap-4">
+        <span class="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">3</span>
+        <span>Go to <strong class="font-medium text-slate-900">Settings</strong> and paste your <a href="https://openrouter.ai" class="text-indigo-700 underline underline-offset-4 transition hover:text-indigo-800">OpenRouter</a> API key.</span>
+      </li>
+    </ol>
+
+    <p class="mt-6 text-lg leading-loose text-slate-600">
+      No API key? Choose <strong class="font-medium text-slate-800">Free Model</strong>
+      in Settings instead. It works with no key and costs nothing.
+    </p>
+
+    <div class="mt-14 rounded-2xl border border-amber-200 bg-amber-50 p-7">
+      <h3 class="text-lg font-semibold text-amber-900">Windows will show a warning. That is expected.</h3>
+      <p class="mt-3 leading-relaxed text-amber-900/90">
+        You will see <em>“Windows protected your PC”</em>, because the installer is not
+        code-signed — no certificate has been bought yet, so Windows cannot confirm who
+        published it. Click <strong class="font-medium">More info</strong>, then
+        <strong class="font-medium">Run anyway</strong>.
+      </p>
+      <p class="mt-3 leading-relaxed text-amber-900/90">
+        This is not a malware warning, and ISHKAPON AI is not malware. It is what Windows
+        shows for every program that has not paid for a signing certificate. If your
+        school or office blocks unsigned installers, ask your IT administrator.
+      </p>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" class="scroll-mt-8 border-t border-slate-200 py-24">
+    <h2 class="text-3xl font-bold tracking-tight text-slate-900">How it works</h2>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      Most AI study tools ask a language model to produce an answer, arithmetic
+      included. The model produces a plausible string of characters. ISHKAPON does not
+      let it.
+    </p>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      The model is only allowed to decide <em>what</em> to calculate. A real CPython
+      interpreter — compiled to WebAssembly, running inside a locked-down sandbox — then
+      performs the calculation, and the app shows you the code next to the result. If a
+      number appears in an answer, Python produced it.
+    </p>
+
+    <div class="mt-14 space-y-12">
+      <div>
+        <h3 class="text-xl font-semibold tracking-tight text-slate-900">It cannot reach your computer</h3>
+        <p class="mt-4 leading-loose text-slate-700">
+          The sandbox has no network, no access to your files, and no ability to run
+          programs on your machine. This is enforced rather than assumed: Pyodide is built
+          for a browser and does not lock these down by itself, so each escape was
+          demonstrated working and then closed. SymPy, NumPy and mpmath ship with the app,
+          so a calculation never reaches the internet either.
+        </p>
+      </div>
+
+      <div>
+        <h3 class="text-xl font-semibold tracking-tight text-slate-900">Your chats stay yours</h3>
+        <p class="mt-4 leading-loose text-slate-700">
+          Everything is stored in a database on your own computer. There is no ISHKAPON
+          account, no ISHKAPON server, and no analytics, telemetry or crash reporting of
+          any kind.
+        </p>
+      </div>
+
+      <div>
+        <h3 class="text-xl font-semibold tracking-tight text-slate-900">Bangla or English</h3>
+        <p class="mt-4 leading-loose text-slate-700">
+          Answers come in whichever language you choose. Numbers, units and equations stay
+          in Latin script either way, because Bangla digits and symbols cannot be
+          typeset inside a physics formula.
+        </p>
+      </div>
+
+      <div>
+        <h3 class="text-xl font-semibold tracking-tight text-slate-900">Bring your own model</h3>
+        <p class="mt-4 leading-loose text-slate-700">
+          Use any model on OpenRouter, or their free router. Change it whenever you like
+          in Settings.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Honesty -->
+  <section class="border-t border-slate-200 py-24">
+    <h2 class="text-3xl font-bold tracking-tight text-slate-900">Please read this part</h2>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      <strong class="font-medium text-slate-900">A language model is sometimes wrong, and it is wrong confidently.</strong>
+      ISHKAPON verifies the arithmetic, because the arithmetic is actually run. It cannot
+      check that the model set up the <em>right</em> calculation for your question in the
+      first place.
+    </p>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      So treat it as a second opinion and a study aid — not as an answer key. For an
+      exam, a submission or a lab conclusion, check the answer against your textbook or
+      your teacher. The <a href="https://github.com/sakhadib/ishkaponai/blob/main/TERMS.md" class="text-indigo-700 underline underline-offset-4 transition hover:text-indigo-800">terms</a>
+      say this plainly too.
+    </p>
+  </section>
+
+  <!-- Other platforms -->
+  <section class="border-t border-slate-200 py-24">
+    <h2 class="text-3xl font-bold tracking-tight text-slate-900">Other platforms</h2>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      The code is cross-platform and macOS and Linux builds are configured, but the
+      installers do not exist yet. They were not produced by the machine that built this
+      release, and shipping a build nobody has run would be worse than not shipping it.
+    </p>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      They are being built on Linux and macOS runners and will be added to a later
+      release. Nothing is wrong with the app on those platforms — the artefacts simply do
+      not exist yet.
+    </p>
+  </section>
+
+  <!-- Data -->
+  <section class="border-t border-slate-200 py-24">
+    <h2 class="text-3xl font-bold tracking-tight text-slate-900">Your data</h2>
+
+    <div class="mt-8 space-y-5 text-lg leading-loose text-slate-700">
+      <p>
+        Your question, and the conversation needed to answer it, are sent to
+        <a href="https://openrouter.ai" class="text-indigo-700 underline underline-offset-4 transition hover:text-indigo-800">OpenRouter</a>
+        — that is the only network traffic the app generates, and a language model has to
+        run somewhere for an answer to come back.
+      </p>
+      <p>
+        <strong class="font-medium text-slate-900">If you fill in your name, age, grade
+        or subjects in Settings, those are sent too, with every question.</strong> They are
+        entirely optional and the app is fully usable with all of them blank. A nickname
+        rather than a full name limits this.
+      </p>
+      <p>
+        Your API key is encrypted with your operating system's secret store. Uninstalling
+        does not delete your chats; they live in
+        <code class="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] text-slate-900">%APPDATA%\ISHKAPON AI\ishkapon.db</code>,
+        and deleting that file erases them.
+      </p>
+    </div>
+
+    <p class="mt-10 text-lg leading-loose text-slate-700">
+      The <a href="https://github.com/sakhadib/ishkaponai/blob/main/PRIVACY.md" class="text-indigo-700 underline underline-offset-4 transition hover:text-indigo-800">privacy policy</a>
+      has the full detail, with the source file behind every claim.
+    </p>
+  </section>
+
+  <!-- Contribute -->
+  <section class="border-t border-slate-200 py-24">
+    <h2 class="text-3xl font-bold tracking-tight text-slate-900">Contributing</h2>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      ISHKAPON is open source under the MIT licence, and contributions are genuinely
+      welcome — bug reports, translations, better explanations, or code.
+    </p>
+
+    <p class="mt-6 text-lg leading-loose text-slate-700">
+      It is built with Electron, React and TypeScript. If you want to work on it, you
+      need Node 22 or newer:
+    </p>
+
+    <pre class="mt-8 overflow-x-auto rounded-xl bg-slate-900 p-6 text-[0.9rem] leading-relaxed text-slate-100"><code>git clone https://github.com/sakhadib/ishkaponai.git
+cd ishkaponai
+npm install
+npm run dev</code></pre>
+
+    <p class="mt-8 text-lg leading-loose text-slate-700">
+      Two things will help you find your way. The
+      <a href="https://github.com/sakhadib/ishkaponai/blob/main/README.md" class="text-indigo-700 underline underline-offset-4 transition hover:text-indigo-800">README</a>
+      explains the architecture, and
+      <a href="https://github.com/sakhadib/ishkaponai/blob/main/decisions.md" class="text-indigo-700 underline underline-offset-4 transition hover:text-indigo-800">decisions.md</a>
+      records why things are the way they are — including the decisions that were tried
+      and then reversed, which is usually the part you cannot guess.
+    </p>
+
+    <div class="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+      <a href="https://github.com/sakhadib/ishkaponai/issues"
+         class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2">
+        Open an issue
+      </a>
+      <a href="https://github.com/sakhadib/ishkaponai"
+         class="inline-flex items-center justify-center rounded-xl px-7 py-3.5 text-base font-medium text-slate-700 transition hover:text-indigo-700">
+        Browse the source →
+      </a>
+    </div>
+
+    <p class="mt-8 text-lg leading-loose text-slate-600">
+      Not a programmer? Reporting a problem you hit, or a question it gave the wrong
+      answer to, is just as useful. Include the question and the answer it produced.
+    </p>
+  </section>
+
+</main>
+
+<footer class="mx-auto max-w-3xl px-6 pb-20 pt-8">
+  <div class="border-t border-slate-200 pt-10 text-sm leading-relaxed text-slate-500">
+    <p>
+      ISHKAPON AI is developed independently and is not affiliated with OpenRouter,
+      Electron, Pyodide or any model provider. Model names belong to their respective
+      owners.
+    </p>
+    <p class="mt-4">
+      <a href="https://github.com/sakhadib/ishkaponai/blob/main/LICENSE" class="transition hover:text-indigo-700">MIT licence</a>
+      <span class="px-2 text-slate-300">·</span>
+      <a href="https://github.com/sakhadib/ishkaponai/blob/main/PRIVACY.md" class="transition hover:text-indigo-700">Privacy</a>
+      <span class="px-2 text-slate-300">·</span>
+      <a href="https://github.com/sakhadib/ishkaponai/blob/main/TERMS.md" class="transition hover:text-indigo-700">Terms</a>
+      <span class="px-2 text-slate-300">·</span>
+      <a href="https://github.com/sakhadib/ishkaponai/issues" class="transition hover:text-indigo-700">Contact</a>
+    </p>
+    <p class="mt-6">Made in Rajshahi, Bangladesh.</p>
+  </div>
+</footer>
+
+</body>
+</html>

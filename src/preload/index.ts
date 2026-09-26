@@ -54,8 +54,7 @@ const api: IshkaponApi = {
     ipcRenderer.invoke(IpcChannel.ChatSend, sessionId, text),
   stopTurn: (sessionId: string): Promise<void> => ipcRenderer.invoke(IpcChannel.ChatStop, sessionId),
 
-  onAgentEvent: (handler: (event: AgentEvent) => void): (() => void) => {
-    // The raw IpcRendererEvent is intentionally not forwarded: it would leak an
+  onAgentEvent: (handler: (event: AgentEvent) => void): (() => void) => {    // The raw IpcRendererEvent is intentionally not forwarded: it would leak an
     // object with a `sender` reference into the renderer world.
     const listener = (_event: unknown, payload: AgentEvent): void => handler(payload)
     ipcRenderer.on(AgentEventChannel, listener)

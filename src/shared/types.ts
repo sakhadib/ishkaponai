@@ -205,33 +205,79 @@ export type AgentEvent =
     }
 
 // ---------------------------------------------------------------------------
-// Agent host commands (main -> agent host)
+// Agent host wire protocol
+//
+// Main -> agent over `utilityProcess.postMessage`.
+// Agent -> main over `process.parentPort.postMessage`.
 // ---------------------------------------------------------------------------
 
-export interface SendMessageCommand {
-  kind: 'send'
-  sessionId: string
-  messageId: string
-  text: string
+/** One prior turn, replayed to the agent so it can rebuild context. */
+export interface TurnRecord {
+  role: 'user' | 'assistant'
+  content: string
+  /**
+   * Tool calls made during that assistant turn. Replaying these keeps the
+   * calculation trail in context, so a later turn can refer back to a value
+   * instead of recomputing or hallucinating it.
+   */
+  toolCalls?: ToolCallRecord[]
 }
 
-export interface StopTurnCommand {
+/** Condensed tool call, for context replay. */
+export interface ToolCallRecord {
+  code: string
+  resultValue: string | null
+  stdout: string | null
+  error: string | null
+}
+
+export interface AgentInitCommand {
+  kind: 'init'
+  /** `null` clears the key; the agent must then refuse to start turns. */
+  apiKey: string | null
+}
+
+export interface AgentSendCommand {
+  kind: 'send'
+  sessionId: string
+  /** Id of the assistant message being produced. */
+  messageId: string
+  /** The student's new message. */
+  text: string
+  /** Prior turns, oldest first. Excludes the new message. */
+  history: TurnRecord[]
+  /** Compacted running summary, or `null` when the session fits in budget. */
+  summary: string | null
+  modelId: string
+  maxOutputTokens: number
+  pythonTimeoutMs: number
+  preferredLanguage: LanguagePref
+}
+
+export interface AgentStopCommand {
   kind: 'stop'
   sessionId: string
 }
 
-export interface UpdateSettingsCommand {
+export interface AgentSettingsCommand {
   kind: 'settings'
   settings: Settings
 }
 
-export interface ResetInterpreterCommand {
+export interface AgentResetInterpreterCommand {
   kind: 'reset-interpreter'
   sessionId: string
 }
 
 export type AgentCommand =
-  | SendMessageCommand
-  | StopTurnCommand
-  | UpdateSettingsCommand
-  | ResetInterpreterCommand
+  | AgentInitCommand
+  | AgentSendCommand
+  | AgentStopCommand
+  | AgentSettingsCommand
+  | AgentResetInterpreterCommand
+
+/** Handshake and failure notices that are not part of a turn. */
+export type AgentToMain =
+  | { type: 'host.ready' }
+  | { type: 'host.error'; message: string }
+  | AgentEvent

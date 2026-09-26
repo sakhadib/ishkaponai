@@ -27,12 +27,9 @@ export interface UiState {
   search: string
   notices: Notice[]
   confirm: PendingConfirm | null
-  /** True while the OS is in dark mode; drives the resolved-theme display. */
-  systemPrefersDark: boolean
 
   setView: (view: View) => void
   setSearch: (search: string) => void
-  setSystemPrefersDark: (dark: boolean) => void
   notify: (tone: NoticeTone, message: string, ttlMs?: number) => void
   dismiss: (id: number) => void
   askConfirm: (request: PendingConfirm) => void
@@ -46,14 +43,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   search: '',
   notices: [],
   confirm: null,
-  systemPrefersDark:
-    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : false,
 
   setView: (view) => set({ view }),
   setSearch: (search) => set({ search }),
-  setSystemPrefersDark: (systemPrefersDark) => set({ systemPrefersDark }),
 
   notify: (tone, message, ttlMs = tone === 'error' ? 12_000 : 5000) => {
     const id = nextNoticeId

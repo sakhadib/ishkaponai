@@ -27,7 +27,6 @@ import type { SecretStore } from './secrets'
 import type { SettingsStore } from './settings'
 import { parseSettingsPatch } from './settings'
 import { listModels } from './openrouter'
-import { applyThemeMode, syncWindowBackground } from './theme'
 import {
   appendMessage,
   autoTitleSession,
@@ -240,20 +239,13 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
 
       const next = settings.update(validated)
 
-      if (validated.theme !== undefined) {
-        // Drives `nativeTheme.themeSource`, so the native title bar follows the
-        // app. The renderer learns the new theme from the returned settings.
-        applyThemeMode(next.theme)
-        syncWindowBackground(getWindow())
-      }
-
       // The user instructions are system-prompt layer 2 and the timeout drives
       // the sandbox, so the host needs both.
       agentHost.pushSettings()
 
-      // Push rather than relying on the promise: the resolved theme has to reach
-      // the document as an attribute, and a write made from anywhere (including
-      // a future second window) must not leave the UI showing a stale value.
+      // Push rather than relying on the promise: a write made from anywhere
+      // (including a future second window) must not leave the UI showing a
+      // stale value.
       getWindow()?.webContents.send(SettingsEventChannel, next)
 
       return next

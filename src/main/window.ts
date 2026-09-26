@@ -1,8 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
-import type { ThemeMode } from '@shared/types'
 import { WINDOW_BOUNDS, saveWindowState, loadWindowState } from './store'
-import { windowBackgroundFor, type ResolvedTheme } from './theme'
+import { WINDOW_BACKGROUND } from './theme'
 
 const isDev = !app.isPackaged
 
@@ -30,17 +29,7 @@ export function getMainWindow(): BrowserWindow | null {
   return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null
 }
 
-export async function createMainWindow(
-  entry: WindowEntryPoints,
-  /** Resolved concrete theme (`system` already applied), for preload + nativeTheme. */
-  theme: ResolvedTheme = 'dark',
-  /**
-   * The user's *mode*. The preload needs this to know whether to keep following
-   * the OS after first paint; passing only the resolved value would leave
-   * `system` mode inert until the next settings write.
-   */
-  themeSource: ThemeMode = 'dark'
-): Promise<BrowserWindow> {
+export async function createMainWindow(entry: WindowEntryPoints): Promise<BrowserWindow> {
   const state = await loadWindowState()
 
   const window = new BrowserWindow({
@@ -51,24 +40,15 @@ export async function createMainWindow(
     minWidth: WINDOW_BOUNDS.MIN_WIDTH,
     minHeight: WINDOW_BOUNDS.MIN_HEIGHT,
     show: false,
-    // Matches the renderer's own backdrop so a resize never flashes white in
-    // dark mode before the page paints.
-    backgroundColor: windowBackgroundFor(theme),
+    // Matches the renderer's `--bg`, so the frame drawn before the stylesheet
+    // lands is the same colour as the page rather than a white flash.
+    backgroundColor: WINDOW_BACKGROUND,
     title: 'ISHKAPON AI',
     autoHideMenuBar: true,
     webPreferences: {
       // Emitted as CommonJS with an explicit `.cjs` extension: sandboxed
       // preload scripts cannot use ESM imports.
       preload: join(import.meta.dirname, '../preload/index.cjs'),
-      // The preload reads the theme from here and applies it before first paint.
-      // An inline <script> would be blocked by the strict CSP (§13.4).
-      // The preload needs both the resolved theme (to paint) and the *mode*, so
-      // it can decide whether to keep following the OS live. Passing only the
-      // resolved value would make `system` mode inert after first paint.
-      additionalArguments: [
-        `--ishkapon-theme=${theme}`,
-        `--ishkapon-theme-source=${themeSource}`
-      ],
       // Renderer runs sandboxed with no direct Node access; the preload
       // bridge is the only surface it can reach.
       contextIsolation: true,

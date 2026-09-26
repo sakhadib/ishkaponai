@@ -1,14 +1,17 @@
 /* ==========================================================================
    ISHKAPON renderer stylesheet
 
-   Three themes as CSS custom properties selected by `data-theme` on <html>.
-   Preload applies the attribute before first paint; the renderer only reads it
-   back. `data-theme-source` records whether the mode is `system`, which is what
-   preload's own `prefers-color-scheme` listener keys off.
+   One theme, light, by decision (D28). The token block below is the only
+   place a colour is defined in this file: there is no dark palette and no
+   `data-theme` attribute to switch on, so nothing here can drift out of step
+   with a second theme that nobody maintains.
 
    Every colour in this file is a token. There are no literal colours outside
-   the two token blocks, and none inside component rules. Light and dark were
-   both checked for contrast, not just dark.
+   the token block, and none inside component rules.
+
+   The palette was checked for contrast with `node tools/contrast.mjs`, not
+   eyeballed — all 16 pairs clear WCAG AA 4.5:1. Re-run it after changing any
+   colour here.
    ========================================================================== */
 
 /* --- Fonts ---------------------------------------------------------------- */
@@ -34,14 +37,18 @@
   font-display: swap;
 }
 
-/* --- Tokens: light --------------------------------------------------------
+/* --- Tokens ---------------------------------------------------------------
    Verified with `node tools/contrast.mjs`: all 16 pairs clear WCAG AA 4.5:1.
    Re-run it after changing any colour here. The `--text-faint` value is
    deliberately darker than a "faint" label suggests — at the old #78818f it
    measured 3.9:1 on the page background and failed, and it carries timestamps
-   and collapsed previews, which are body text by any reading. */
-:root,
-[data-theme='light'] {
+   and collapsed previews, which are body text by any reading.
+
+   `color-scheme` is set here rather than by the preload script, which is where
+   it used to live. It is a declaration about the document, so CSS is the right
+   owner, and declaring it here means scrollbars, form controls and the
+   caret are light without any script having to run first. */
+:root {
   color-scheme: light;
 
   --font-sans: 'Roboto', 'Kalpurush', sans-serif;
@@ -102,64 +109,9 @@
   --radius-lg: 14px;
 }
 
-/* --- Tokens: dark --------------------------------------------------------- */
-[data-theme='dark'] {
-  color-scheme: dark;
-
-  --bg: #0c0f1a;
-  --bg-elevated: #151a2b;
-  --bg-sunken: #090b13;
-  --bg-subtle: #1b2133;
-  --bg-inset: #232a3e;
-  --bg-hover: #1f2639;
-  --bg-active: #2a3248;
-
-  --border: #262e44;
-  --border-strong: #3a4460;
-  --border-subtle: #1c2233;
-
-  --text: #e9ecf6;
-  --text-muted: #a8b2c8;
-  --text-faint: #8a94ab;
-  --text-inverse: #0b0e1a;
-
-  /* Lighter and slightly cooler than the light-mode accent: at #4F46E5 on a
-     near-black ground it measures 3.4:1 and fails for a link. */
-  --accent: #8b8cf9;
-  --accent-hover: #a5a5fa;
-  --accent-soft: #1e2140;
-  --accent-text: #0b0e1a;
-  --accent-border: #3e3f7a;
-
-  --danger: #ff8a80;
-  --danger-hover: #ffa39b;
-  --danger-soft: #2c1a1a;
-  --danger-border: #6a3535;
-
-  --warn: #e0b36b;
-  --warn-soft: #2a2114;
-  --warn-border: #6a5327;
-
-  --success: #6fd79c;
-  --success-soft: #14291f;
-  --success-border: #2f5f45;
-
-  --info: #7fc0e4;
-  --info-soft: #13232c;
-  --info-border: #2f5468;
-
-  --code-bg: #1b2133;
-  --code-text: #d8e0ee;
-  --code-border: #29314599;
-
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
-  --shadow-md: 0 2px 4px rgb(0 0 0 / 35%), 0 6px 18px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 10px 24px rgb(0 0 0 / 45%), 0 20px 50px rgb(0 0 0 / 60%);
-}
-
 /* --- System scales ---------------------------------------------------------
    Theme-independent. Anything that is a rhythm rather than a colour lives
-   here, so spacing and type stay consistent across both themes. */
+   here. */
 
 /* Spacing. Standard density, not spacious: a worked solution is already tall,
    and generous padding costs a student a screen of scrolling per answer. */
@@ -847,11 +799,10 @@ select.field__input {
   white-space: nowrap;
 }
 
+/* `--accent-hover`, not `--accent`: the darker step is what reads as selected
+   against the sidebar, and it used to be a light-theme override of a rule that
+   the dark palette also had to satisfy. With one theme it is just the value. */
 .session[data-active='true'] .session__title {
-  color: var(--accent);
-}
-
-[data-theme='light'] .session[data-active='true'] .session__title {
   color: var(--accent-hover);
 }
 

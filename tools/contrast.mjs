@@ -47,24 +47,6 @@ const LIGHT = {
   info: '#1B4F6B'
 }
 
-const DARK = {
-  bg: '#0C0F1A',
-  elevated: '#151A2B',
-  sunken: '#090B13',
-  subtle: '#1B2133',
-  text: '#E9ECF6',
-  muted: '#A8B2C8',
-  faint: '#8A94AB',
-  accent: '#8B8CF9',
-  accentHover: '#A5A5FA',
-  onAccent: '#0B0E1A',
-  danger: '#FF8A80',
-  onDanger: '#2A0E0C',
-  success: '#6FD79C',
-  warn: '#E0B36B',
-  info: '#7FC0E4'
-}
-
 /** [label, foreground, background, minimum, note] */
 const CHECKS = (t) => [
   ['body text on page', t.text, t.bg, 4.5, 'long-form reading'],
@@ -86,7 +68,10 @@ const CHECKS = (t) => [
 ]
 
 let failures = 0
-for (const [name, tokens] of [['LIGHT', LIGHT], ['DARK', DARK]]) {
+// One palette, because there is one theme (D28). The light tokens below are a
+// transcription of the `:root` block in `styles.css` — if you change a colour
+// there, change it here, or this tool is checking a palette nobody ships.
+for (const [name, tokens] of [['LIGHT', LIGHT]]) {
   console.log(`\n=== ${name} ===`)
   for (const [label, fg, bg, min, note] of CHECKS(tokens)) {
     const r = ratio(fg, bg)

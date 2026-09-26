@@ -20,7 +20,7 @@
  *   `turn-recorder` batched persistence of streamed events
  *   `ipc`           the typed IPC surface
  */
-import { app, BrowserWindow, nativeTheme, session as electronSession, shell } from 'electron'
+import { app, BrowserWindow, session as electronSession, shell } from 'electron'
 import { join } from 'node:path'
 import { buildApplicationMenu } from './menu'
 import { flushWindowState } from './store'
@@ -29,7 +29,7 @@ import { AgentHost } from './agent-host'
 import { Database } from './db'
 import { SecretStore } from './secrets'
 import { SettingsStore } from './settings'
-import { applyThemeMode, syncWindowBackground } from './theme'
+import { applyThemeMode } from './theme'
 import { broadcastAgentEvent, registerIpcHandlers } from './ipc'
 import { reconcileInterruptedMessages } from './sessions'
 
@@ -158,12 +158,10 @@ async function onReady(): Promise<void> {
   const settings = new SettingsStore(db)
   const secrets = new SecretStore(db)
 
-  // Set `nativeTheme.themeSource` before any window exists, so the native title
-  // bar is correct from the first frame and `system` mode starts tracking the
-  // OS immediately (§13.4). The return value is unused here; `openWindow`
-  // re-resolves it per window so a window re-created after `activate` picks up
-  // a theme changed while it was closed. The call is idempotent.
-  applyThemeMode(settings.get().theme)
+  // Pin Chromium's own chrome to light before any window exists, so the title
+  // bar matches the app even when the OS is in dark mode. The app is light-only
+  // by decision, so this takes no argument and never changes.
+  applyThemeMode()
 
   const agentHost = new AgentHost(db, {
     secrets,
@@ -175,22 +173,17 @@ async function onReady(): Promise<void> {
 
   registerIpcHandlers({ db, settings, secrets, agentHost, getWindow: getMainWindow })
 
-  // In `system` mode the OS can change theme while the app is open. The renderer
-  // already follows it via `prefers-color-scheme`; this keeps the native window
-  // backdrop in step so a resize does not flash the wrong colour.
-  nativeTheme.on('updated', () => syncWindowBackground(getMainWindow()))
+  // Nothing listens to `nativeTheme` any more. With `themeSource` pinned to
+  // light the resolved theme can never change, so an OS theme flip has no
+  // consequence for this app — and a listener that re-asserts a constant is
+  // worse than no listener, because it implies the value is in flux.
 
   // The agent host is not started eagerly. It is a ~50 MB WebAssembly sandbox,
   // and a student who only opens Settings to paste a key should not pay for it.
   // `AgentHost.ensureRunning` forks it on the first turn and respawns it after an
   // unexpected exit.
-  //
-  // Read the mode fresh on each launch rather than closing over `theme`, so a
-  // window re-created after `activate` picks up a theme the user changed while
-  // the window was closed.
   const openWindow = async (): Promise<void> => {
-    const mode = settings.get().theme
-    await createMainWindow(resolveEntryPoints(), applyThemeMode(mode), mode)
+    await createMainWindow(resolveEntryPoints())
   }
 
   await openWindow()

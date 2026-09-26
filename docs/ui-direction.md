@@ -3,9 +3,13 @@
 Synthesised 2026-09-26 from the `ui-ux-pro-max-skill` local dataset, queried with
 `tools/skillq.mjs` against ISHKAPON's actual profile.
 
-**Status:** direction only. Not yet implemented. Supersedes the ad-hoc dark-only
-stylesheet as the target, but the current UI works and is not being replaced
-until this is agreed.
+**Status:** mostly implemented. Supersedes the ad-hoc dark-only stylesheet as the
+target. The token system, the sidebar, the settings modal and the Personalise
+pane are in; the chat-UI items from `AICHATUI-SKILL.md` are not.
+
+**Amended by D28:** the app is light-only. The dataset's light + dark token
+guidance is superseded — the token *discipline* still applies, the second
+palette does not.
 
 ---
 
@@ -117,9 +121,10 @@ These are `Severity: High` in the dataset and apply to desktop unchanged:
   replacement.
 - **Reduced motion** — honour `prefers-reduced-motion`. The Thought block
   auto-collapse and the streaming fade are the two places that animate.
-- **Contrast 4.5:1** for body text, both themes. Bangla at small sizes is the
-  risky case: Kalpurush has a smaller effective x-height than Roboto, so Bangla
-  body text needs a size step up, not down.
+- **Contrast 4.5:1** for body text. Measured with `tools/contrast.mjs`, not
+  eyeballed — all 16 pairs pass. Bangla at small sizes is the risky case:
+  Kalpurush has a smaller effective x-height than Roboto, so Bangla body text
+  needs a size step up, not down.
 - **Error clarity** — errors near the field that caused them, not only at the
   top. The API key panel and model picker are the two fields that need it.
 - **Never colour alone** — status must carry a label or icon as well. The

@@ -22,7 +22,6 @@ import { useUiStore } from '@/store/uiStore'
 
 export default function App(): React.JSX.Element {
   const view = useUiStore((state) => state.view)
-  const setSystemPrefersDark = useUiStore((state) => state.setSystemPrefersDark)
   const notify = useUiStore((state) => state.notify)
   const setView = useUiStore((state) => state.setView)
 
@@ -60,17 +59,6 @@ export default function App(): React.JSX.Element {
       void selectSession(sessions[0]?.id ?? null)
     }
   }, [secretLoaded, sessions, selectSession, settingsLoaded])
-
-  // Follow the OS so `system` mode is displayed accurately, and so the shell
-  // re-renders when the OS flips while the app is open.
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return
-    const query = window.matchMedia('(prefers-color-scheme: dark)')
-    const onChange = (event: MediaQueryListEvent): void => setSystemPrefersDark(event.matches)
-    setSystemPrefersDark(query.matches)
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
-  }, [setSystemPrefersDark])
 
   // --- First-run guidance ---------------------------------------------------
   const guided = useRef(false)

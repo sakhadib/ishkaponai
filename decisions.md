@@ -21,7 +21,7 @@ history) so the reasoning stays auditable.
 | D5 | Model catalog: fetched from OpenRouter, filtered, cached | LOCKED |
 | D6 | Secret storage: `safeStorage` async API, main process only | LOCKED |
 | D7 | Settings + conversation persistence: JSON/NDJSON, no native modules | LOCKED |
-| D8 | Theming: light / dark / system via CSS custom properties | LOCKED |
+| D8 | Theming: light only, via CSS custom properties | SUPERSEDED by D28 |
 | D9 | Model context: layered, user-editable, inspectable | LOCKED |
 | D10 | Shell tool: per-OS shell selection + OS detection | LOCKED |
 | D11 | Command safety: policy engine + approval, enforced outside the LLM | LOCKED |
@@ -48,6 +48,7 @@ history) so the reasoning stays auditable.
 | D25 | Zustand + IPC reducer, not `useChat` | LOCKED |
 | D26 | **General shell execution removed; `python` is the only tool** | LOCKED |
 | D27 | **Answer is a human worked example; agent steps behind a Thought toggle** | LOCKED |
+| D28 | **Light-only. No theme setting, no dark palette** | LOCKED |
 
 > **D7 is superseded** by the SQLite decision (see amendment table).
 > **D10–D14 are void or moot** as of D26. Their reasoning is retained above, so
@@ -255,6 +256,10 @@ for the schema.
 ---
 
 ## D8 — Theming
+
+> **Superseded by D28.** Kept verbatim for the record. What survives is the token
+> discipline and the "verify contrast, do not eyeball it" rule; the three modes,
+> the `data-theme` attribute and the preload bootstrapping are all gone.
 
 **Decision.** Three modes — **light**, **dark**, **system** — driven entirely by
 CSS custom properties, selected by a `data-theme` attribute on `<html>`, and
@@ -565,7 +570,7 @@ belongs in `dependencies`. This is why React is a devDependency today.
 - [ ] `npm run typecheck` passes for main, preload, and renderer
 - [ ] `npm run build` produces ESM main, CJS preload, ESM renderer
 - [ ] Packaged app boots; preload still sandboxed (no ESM in preload)
-- [ ] Theme applies before first paint in all three modes, both OS light/dark
+- [ ] Theme applies before first paint in all three modes, both OS light/dark — **VOID** (D28); replaced by: the app renders light regardless of OS theme, and the native title bar matches
 - [ ] API key round-trips: entered in renderer → stored encrypted in main →
       used by agent host → **never** returned to renderer
 - [ ] `env` run as an agent command does **not** reveal the API key
@@ -621,3 +626,62 @@ Append new entries below. Do not edit existing decisions in place.
 | 2026-09-26 | **D26** | **General shell execution removed from the product.** `python` (Pyodide/WASM) is the only tool. **Voids D10, D11, D12, D14; makes D13 moot; supersedes D19.** `shell-quote` dropped from the stack | Confirmed with the author: the problem always arrives in the prompt, so file and OS access are not required. Pyodide already provides exact arithmetic, symbolic algebra, calculus, units, matrices, and plotting — none of which a system shell supplies reliably on an arbitrary student machine. Sequential Python statements also map better onto the "no jumps" requirement than a shell pipeline. Removing the shell collapses the prompt-injection blast radius to *a wrong answer* and eliminates the unresolved Windows confinement gap entirely, rather than mitigating it. |
 | 2026-09-26 | **D27** | **New.** The student's answer is a human worked example; the agent's steps (reasoning, Python, raw output, failed attempts) live behind a collapsible "Thought" toggle above it, not inline in the transcript | The agent loop is identify → compute → see results → write answer, so the answer is written *after* the results exist and can be a clean derivation. Showing code inline made a solved problem look like a machine transcript, which is not what a student reads. Evidence is still one click away and still in SQLite, so auditability is unchanged |
 | 2026-09-26 | D14 (revised) | Process hygiene narrowed to the `python` tool: 60 s interruptible timeout, 64 KB output cap, in-memory VFS, reset between sessions | The env-allowlist rationale is superseded by a stronger property: with no child process, the API key is unreachable **by construction** rather than protected by filtering |
+| 2026-09-26 | **D28** | **Light only. Supersedes D8.** `ThemeMode` and `Settings.theme` removed from the contract, the dark palette deleted, the Appearance pane removed, and the `data-theme` mechanism retired | Author's decision. A student reads worked solutions here for minutes at a time, often in a bright classroom, and often prints or screenshots the result — a fixed light surface is the better reading experience and is unambiguous in a shared image. It also removes a whole class of work rather than adding one: no second palette to keep accessible, no first-paint flash to prevent, and no "which theme is this screenshot?" question. The token discipline and the measured-contrast rule from D8 survive; only the switching does not |
+
+### D28 — Light only
+
+**Decision.** ISHKAPON has exactly one theme: light. There is no setting for
+it, no `data-theme` attribute, and no dark palette in the codebase.
+
+**Rationale.** The author's call, and it is the right one for this product. The
+app is a reading surface first — a worked solution with every step shown — so
+the palette is a legibility decision, not a preference. Three things follow that
+are worth stating rather than assuming:
+
+- **A light surface is the right reading surface here.** Long-form solutions
+  with maths, tables and code, read for minutes, in a room that is often lit
+  from behind the screen.
+- **The cost was asymmetry.** A second palette is not a one-off: every future
+  colour has to be re-checked against it, and the first person to add a token
+  will forget. That is a permanent tax on a codebase that has one audience and
+  one job.
+- **"Respect the OS" is a desktop-app habit, not a requirement.** Copying it
+  here would have bought a preference some students have and some do not, at
+  the price of a permanent maintenance obligation.
+
+**What is kept, and what goes.**
+
+Kept: the token discipline (every colour in `styles.css` is a custom property;
+no literal colours in component rules) and the measured-contrast rule — the
+palette is verified by `tools/contrast.mjs`, not by eye. Both were the durable
+part of D8.
+
+Removed: the `ThemeMode` type, `Settings.theme`, the `[data-theme='dark']` token
+block, the `data-theme` / `data-theme-source` attributes, the preload's
+`installTheme()`, the `--ishkapon-theme` `additionalArguments` channel, the
+`resolvedTheme` selector, the `systemPrefersDark` store field and its
+`prefers-color-scheme` listener, the Appearance pane, and the `sun` icon.
+
+**Consequences.**
+- `theme` joins `titleModelId` in `RETIRED_SETTINGS`: dropped from a patch
+  rather than fatal, so a stored row or a not-yet-restarted renderer holding
+  the old contract cannot block an unrelated settings write. `migrate()`
+  iterates `DEFAULT_SETTINGS`, so a retired key is never read in and is gone
+  again on the next write.
+- `color-scheme: light` moved from the preload into `:root`, where it is a
+  declaration about the document rather than something a script has to run
+  first. Scrollbars, form controls and the caret follow from it.
+- `nativeTheme.themeSource` is still pinned to `'light'` in main. This is the
+  one part CSS cannot reach: without it a student on a dark-mode OS gets a dark
+  title bar around a light app.
+- The `nativeTheme` `'updated'` listener is gone. With `themeSource` pinned,
+  the resolved theme cannot change, and a listener that re-asserts a constant
+  implies a value is in flux when it is not.
+- `showThinking` moved to the Answers pane. It was sharing Appearance with the
+  theme selector, and it is about how an answer reads, not how the app looks.
+
+**Rejected: keeping the switch, defaulting to light.** A hidden `theme` field
+would have preserved the dark palette "just in case" — at the cost of keeping
+it verified and current, forever, for a mode that ships switched off. A
+half-maintained dark theme is worse than none, because it will look fine in
+review and be wrong in the one place someone checks.

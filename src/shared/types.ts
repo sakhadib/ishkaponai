@@ -13,7 +13,11 @@
 /** Subset of `NodeJS.Platform`, safe for the renderer to depend on. */
 export type Platform = 'win32' | 'darwin' | 'linux' | 'freebsd' | 'openbsd' | 'sunos'
 
-export type ThemeMode = 'light' | 'dark' | 'system'
+/**
+ * There is no theme mode, and that is deliberate: ISHKAPON is light-only. The
+ * type is gone rather than pinned to `'light'`, so a future contributor cannot
+ * reintroduce a switch by wiring an existing enum back up.
+ */
 
 /** `auto` mirrors the language of the user's message. */
 export type LanguagePref = 'auto' | 'en' | 'bn'
@@ -105,7 +109,6 @@ export interface SessionDetail {
 // ---------------------------------------------------------------------------
 
 export interface Settings {
-  theme: ThemeMode
   /** OpenRouter model slug. `null` until the user chooses one. */
   modelId: string | null
   preferredLanguage: LanguagePref
@@ -134,7 +137,6 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'system',
   modelId: null,
   preferredLanguage: 'auto',
   userInstructions: '',

@@ -15,7 +15,7 @@ import type { Database } from './db'
 import { readOptionalString } from './row-values'
 import { isLanguagePref } from './sessions'
 import { DEFAULT_SETTINGS, STUDY_SUBJECTS } from '@shared/types'
-import type { Settings, StudySubject, ThemeMode } from '@shared/types'
+import type { Settings, StudySubject } from '@shared/types'
 
 const SETTINGS_KEY = 'app'
 
@@ -49,11 +49,21 @@ function collapse(value: string, max = 200): string {
   return flat.length > max ? flat.slice(0, max) : flat
 }
 
-const THEME_MODES: readonly ThemeMode[] = ['light', 'dark', 'system']
+/**
+ * Keys that were once part of `Settings` and are no longer.
+ *
+ * A stored settings blob written by an older build can still carry one, and a
+ * renderer that has not been restarted still holds the old contract in memory.
+ * Such a key is dropped from a patch rather than treated as an error, so one
+ * stale field cannot stop a student from saving something they actually changed.
+ *
+ * - `titleModelId` — the background model is fixed at `openrouter/free`.
+ * - `theme` — the app is light-only (D28).
+ */
+const RETIRED_SETTINGS = new Set(['titleModelId', 'theme'])
 
-function isThemeMode(value: unknown): value is ThemeMode {
-  return typeof value === 'string' && (THEME_MODES as readonly string[]).includes(value)
-}
+/** The messages `normaliseField` throws for a retired key. */
+const RETIRED_MESSAGES = new Set([...RETIRED_SETTINGS].map((key) => `${key} has been removed`))
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -70,10 +80,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  */
 function normaliseField(key: string, value: unknown): Settings[keyof Settings] {
   switch (key) {
-    case 'theme': {
-      if (!isThemeMode(value)) throw new Error(`Invalid theme: ${JSON.stringify(value)}`)
-      return value
-    }
     case 'modelId': {
       if (value === null) return null
       if (typeof value !== 'string') throw new Error('modelId must be a string or null.')
@@ -147,14 +153,14 @@ function normaliseField(key: string, value: unknown): Settings[keyof Settings] {
       // order the student ticked the boxes in.
       return STUDY_SUBJECTS.filter((subject) => out.includes(subject))
     }
-    case 'titleModelId':
-      // Removed from the contract, but a settings row written before the
-      // removal can still carry it. Rejecting the key would make an entire
-      // settings write fail over a field that no longer exists, so it is
-      // dropped: the background model is fixed in the agent host, so a stale
-      // value in the blob has nothing to act on.
-      throw new Error('titleModelId has been removed')
     default:
+      if (RETIRED_SETTINGS.has(key)) {
+        // Removed from the contract, but a settings row written before the
+        // removal can still carry it. Rejecting the key would make an entire
+        // settings write fail over a field that no longer exists, so it is
+        // dropped instead — see `parseSettingsPatch`.
+        throw new Error(`${key} has been removed`)
+      }
       // Unreachable via `Settings`, but the switch is the guard for keys the
       // renderer invented.
       throw new Error(`Unknown setting: ${key}`)
@@ -178,9 +184,7 @@ export function parseSettingsPatch(patch: unknown): Partial<Settings> {
       // failing the whole patch. The renderer still has a copy of the old
       // contract until it is restarted, and one stale key must not stop a
       // student from saving a setting they actually changed.
-      if (error instanceof Error && error.message.startsWith('titleModelId has been removed')) {
-        continue
-      }
+      if (error instanceof Error && RETIRED_MESSAGES.has(error.message)) continue
       throw error
     }
   }
@@ -199,6 +203,11 @@ export function parseSettingsPatch(patch: unknown): Partial<Settings> {
  * reset. Fields this build does not recognise keep their default rather than
  * being guessed at, which is also what happens to a document written by a
  * *newer* build.
+ *
+ * Iterating `Object.keys(DEFAULT_SETTINGS)` rather than the stored keys is what
+ * makes a retired key (`RETIRED_SETTINGS`) disappear for good: it is never read
+ * in, so it is gone from the cache and gone again from the next write. A key
+ * that was merely ignored would linger in the stored blob forever.
  */
 function migrate(stored: unknown): Settings {
   const settings: Settings = { ...DEFAULT_SETTINGS }

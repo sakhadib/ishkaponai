@@ -382,13 +382,21 @@ Stored in the `settings` table as JSON, schema-versioned with a migration hook.
 
 | Key | Type | Default |
 |---|---|---|
-| `theme` | `'light' \| 'dark' \| 'system'` | `system` |
 | `modelId` | OpenRouter slug | none — must be chosen |
 | `preferredLanguage` | `'auto' \| 'en' \| 'bn'` | `auto` |
 | `userInstructions` | string (layer 2, §11.1) | `''` |
 | `pythonTimeoutMs` | number | `60000` |
 | `showThinking` | boolean | `true` |
 | `maxOutputTokens` | number | `2048` |
+| `studentName` | string (Personalise, §11.1) | `''` |
+| `studentAge` | number or `null` | `null` |
+| `studentGrade` | string (free text, §11.1) | `''` |
+| `studySubjects` | `('math' \| 'physics' \| 'chemistry')[]` | `[]` |
+
+Retired keys, dropped from a patch rather than rejected so a stored row or a
+not-yet-restarted renderer cannot block an unrelated write: `theme` (D28),
+`titleModelId`. `migrate()` iterates the current key set, so a retired key is
+never read in and cannot be re-persisted.
 | `titleModelId` | OpenRouter slug or `null` | `null` — a cheap default is used |
 
 There are no autonomy, permission, workspace, or shell settings, because there
@@ -493,16 +501,37 @@ into a structured running summary, and recent turns are sent verbatim.
 
 ## 11. System prompt specification
 
-Composed in three ordered layers. Layers 1 and 3 are machine-owned and not
-user-editable; layer 2 is user text and is treated as untrusted input.
+Composed in four ordered layers. Layers 1 and 4 are machine-owned and not
+user-editable; layers 2 and 3 are user-supplied.
 
 | Layer | Source | Owner |
 |---|---|---|
 | 1 | Base agent prompt (below) | Product |
-| 2 | `userInstructions` from Settings | User |
-| 3 | Runtime environment block | Runtime |
+| 2 | Personalise: `studentName`, `studentAge`, `studentGrade`, `studySubjects` | User |
+| 3 | `userInstructions` from Settings | User |
+| 4 | Runtime environment block | Runtime |
 
-**Layer 3** states: platform, architecture, locale, current date, and the
+**Ordering is load-bearing.** Personalise sits directly after the base rules and
+*before* the student's free text, so the profile is a fixed shape the model
+reads first and anything typed later is a preference layered on top rather than
+something competing with it.
+
+**Layer 2** is a partial record by design — every field is optional, because a
+student who has filled in nothing must still get a working app, and a model
+given "age unknown" handles it better than one given a wrong age. It is emitted
+as a list of `- key: value` facts followed by one instruction: pitch at the
+right level, define terms the student's year would not know, stay inside their
+syllabus, and do not mention the details back or open by greeting them by name.
+The layer is **omitted entirely when empty**, so there are no empty headings in
+front of the model.
+
+`studentGrade` is free text, not an enum: what a student calls their year
+depends on their curriculum, and enumerating it would quietly exclude most of
+the world. Name and grade are whitespace-collapsed and length-capped before they
+are stored, because a newline in either would let a student inject a fake list
+item into their own profile.
+
+**Layer 4** states: platform, architecture, locale, current date, and the
 available tool schema.
 
 Settings offers a **"view exact payload"** inspector, so the student can always
@@ -645,17 +674,23 @@ offline-capable and satisfies the CSP.
 
 ### 13.4 Theming
 
-Three modes — **light**, **dark**, **system** — as CSS custom properties selected
-by `data-theme` on `<html>`, persisted in settings. `system` follows the OS live
-and drives `nativeTheme.themeSource`, so the **native title bar matches**.
+ISHKAPON is **light-only** (D28). There is no theme setting, no `data-theme`
+attribute, and no dark palette in the codebase.
 
-The resolved theme is applied by the **preload script at preload time** from a
-value passed via `webPreferences.additionalArguments`, which avoids a flash
-without an inline `<script>` (which the CSP would block). A
-`prefers-color-scheme` CSS baseline covers first paint.
+All colour is defined once, as CSS custom properties on `:root`, which also
+carries `color-scheme: light` so scrollbars, form controls and the caret are
+light without any script running first. Because the token block is the only
+source, there is no first-paint flash to prevent and no second palette to keep
+accessible.
 
-Every colour is a token. Contrast must be verified in both themes, not just dark.
-Mermaid and KaTeX output are themed from the same tokens.
+`nativeTheme.themeSource` is pinned to `'light'` in main, before the first
+window exists. This is the part CSS cannot reach: without it a student whose OS
+is in dark mode gets a dark title bar and window frame around a light app.
+
+Every colour in the stylesheet is a token — no literal colours in component
+rules. Contrast is **measured**, not eyeballed, with `tools/contrast.mjs`; all
+16 pairs clear WCAG AA 4.5:1. Re-run it after changing any colour. Mermaid and
+KaTeX output are styled from the same tokens.
 
 ### 13.5 Chat UI
 
@@ -799,7 +834,7 @@ packages qualify; React does not.
 - [ ] A ` ```mermaid ` fence renders, and a broken one falls back to source
 - [ ] Every assistant response has a working copy button
 - [ ] Markdown is never injected as raw HTML
-- [ ] Theme applies before first paint in all three modes, both OS light/dark
+- [ ] The app renders light regardless of the OS theme, and the native title bar matches
 
 ### Sessions
 - [ ] Sidebar lists sessions instantly on launch with no network

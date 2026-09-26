@@ -23,7 +23,6 @@ import { Icon } from '@/components/Icon'
 import { AccountSection } from '@/features/settings/sections/AccountSection'
 import { ModelSection } from '@/features/settings/sections/ModelSection'
 import { PersonaliseSection } from '@/features/settings/sections/PersonaliseSection'
-import { AppearanceSection } from '@/features/settings/sections/AppearanceSection'
 import { AnswersSection } from '@/features/settings/sections/AnswersSection'
 import { CalculationSection } from '@/features/settings/sections/CalculationSection'
 import { PromptSection } from '@/features/settings/sections/PromptSection'
@@ -35,7 +34,6 @@ export const SETTINGS_SECTIONS = [
   { id: 'personalise', label: 'Personalise', icon: 'user', blurb: 'Level and subjects' },
   { id: 'answers', label: 'Answers', icon: 'text', blurb: 'Language and instructions' },
   { id: 'calculation', label: 'Calculation', icon: 'calculator', blurb: 'Limits and timeouts' },
-  { id: 'appearance', label: 'Appearance', icon: 'sun', blurb: 'Theme and detail' },
   { id: 'prompt', label: 'Prompt', icon: 'eye', blurb: 'Exactly what is sent' }
 ] as const satisfies ReadonlyArray<{ id: string; label: string; icon: IconName; blurb: string }>
 
@@ -47,7 +45,6 @@ const SECTION_COMPONENTS: Record<SettingsSectionId, () => React.JSX.Element> = {
   personalise: PersonaliseSection,
   answers: AnswersSection,
   calculation: CalculationSection,
-  appearance: AppearanceSection,
   prompt: PromptSection
 }
 
@@ -57,7 +54,8 @@ export interface SettingsViewProps {
 
 export function SettingsView({ onClose }: SettingsViewProps): React.JSX.Element {
   // A section that depends on setup state is opened first, so the student lands
-  // on the thing that is actually blocking them rather than on Appearance.
+  // on the thing that is actually blocking them rather than on a page of
+  // preferences.
   const [active, setActive] = useState<SettingsSectionId>(() => initialSection())
 
   const dialog = useRef<HTMLDivElement>(null)

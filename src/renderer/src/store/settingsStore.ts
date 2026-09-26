@@ -1,11 +1,12 @@
 /**
  * Settings, secret status, and the model catalog.
  *
- * `theme` is the interesting one: main owns resolution (it also drives
- * `nativeTheme`, so the native title bar matches), so the renderer only ever
- * *reflects* what settings say. The resolved `data-theme` on `<html>` is
- * re-asserted by preload, so this store must not write it directly — it calls
- * `updateSettings` and lets main re-emit.
+ * The store only ever *reflects* what main says: it calls `updateSettings` and
+ * lets main re-emit, rather than merging a patch locally. That keeps a single
+ * writer for the persisted document.
+ *
+ * There is no theme here, and nothing to reflect. The app is light-only (D28),
+ * so the palette is a CSS concern with no round trip through IPC.
  */
 import { create } from 'zustand'
 import { DEFAULT_SETTINGS } from '@shared/types'
@@ -126,12 +127,3 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   clearError: () => set({ error: null })
 }))
 
-/**
- * The theme main resolved for the *current* OS state. The store keeps the
- * user's *mode*; this selector reports the concrete value, which is what the
- * UI shows as "currently light".
- */
-export function resolvedTheme(settings: Settings, systemPrefersDark: boolean): 'light' | 'dark' {
-  if (settings.theme === 'system') return systemPrefersDark ? 'dark' : 'light'
-  return settings.theme
-}

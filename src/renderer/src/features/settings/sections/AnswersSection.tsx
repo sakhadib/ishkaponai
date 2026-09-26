@@ -1,9 +1,11 @@
 /**
  * Answers: how responses read.
  *
- * Language and the student's own standing instructions. Grouped together
- * because both change what an answer looks like rather than how the app
- * behaves.
+ * Language, the student's own standing instructions, and how much of the
+ * model's working is left visible. Grouped together because all three change
+ * what an answer *looks like* rather than how the app behaves — which is why
+ * `showThinking` came here when the Appearance pane went (D28) rather than
+ * leaving the setting homeless.
  */
 import type { LanguagePref } from '@shared/types'
 import { SettingsPanel } from '@/features/settings/sections/SettingsPanel'
@@ -45,6 +47,21 @@ export function AnswersSection(): React.JSX.Element {
           ))}
         </select>
       </Field>
+
+      <label className="switch">
+        <input
+          type="checkbox"
+          checked={settings.showThinking}
+          onChange={(event) => void update({ showThinking: event.target.checked })}
+        />
+        <span>
+          Show the working
+          <span className="switch__hint">
+            The reasoning trace, and every calculation with its code and output, appear above each
+            answer in a collapsible block. Turn this off for a plain answer with no working.
+          </span>
+        </span>
+      </label>
 
       <Field
         label="Extra instructions"

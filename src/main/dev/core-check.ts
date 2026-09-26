@@ -88,8 +88,7 @@ function checkSettings(db: Database): void {
   const store = new SettingsStore(db)
   check('defaults match the contract', JSON.stringify(store.get()) === JSON.stringify(DEFAULT_SETTINGS), store.get())
 
-  const updated = store.update({ theme: 'light', pythonTimeoutMs: 500, maxOutputTokens: 100_000 })
-  check('theme applied', updated.theme === 'light', updated.theme)
+  const updated = store.update({ pythonTimeoutMs: 500, maxOutputTokens: 100_000 })
   check('pythonTimeoutMs clamped up to 1000', updated.pythonTimeoutMs === 1_000, updated.pythonTimeoutMs)
   check('maxOutputTokens clamped down to 32768', updated.maxOutputTokens === 32_768, updated.maxOutputTokens)
   check(
@@ -102,36 +101,60 @@ function checkSettings(db: Database): void {
   check('modelId can be cleared', store.update({ modelId: null }).modelId === null)
 
   rejects('unknown key rejected', () => parseSettingsPatch({ shellEnabled: true }))
-  rejects('bad theme rejected', () => parseSettingsPatch({ theme: 'neon' }))
   rejects('bad modelId rejected', () => parseSettingsPatch({ modelId: 'gpt-4o' }))
   rejects('non-boolean showThinking rejected', () => parseSettingsPatch({ showThinking: 'yes' }))
   rejects('non-object patch rejected', () => parseSettingsPatch('theme'))
   check('undefined values are ignored', JSON.stringify(parseSettingsPatch({ theme: undefined })) === '{}')
 
-  // A no-op patch must not rewrite the row.
+  // A retired key is dropped rather than fatal, so a settings row or a
+  // not-yet-restarted renderer still holding the old contract cannot block a
+  // write. `theme` and `titleModelId` are both retired (D28).
+  check(
+    'retired theme key is dropped, not fatal',
+    JSON.stringify(parseSettingsPatch({ theme: 'dark', showThinking: false })) ===
+      JSON.stringify({ showThinking: false })
+  )
+  check(
+    'retired titleModelId key is dropped, not fatal',
+    JSON.stringify(parseSettingsPatch({ titleModelId: 'x' })) === '{}'
+  )
+  check('theme does not survive into stored settings', !('theme' in store.get()))
+
+  // A no-op patch must not rewrite the row. The first call establishes the
+  // value; the second is the one that must be recognised as a no-op.
+  store.update({ preferredLanguage: 'bn' })
   const before = db.get('SELECT value, updated_at FROM settings WHERE key = ?', 'app')
-  store.update({ theme: 'light' })
+  store.update({ preferredLanguage: 'bn' })
   const after = db.get('SELECT value, updated_at FROM settings WHERE key = ?', 'app')
   check('no-op patch is not persisted', before?.['updated_at'] === after?.['updated_at'])
 
   section('settings: persistence and migration')
   const reopened = new SettingsStore(db)
-  check('settings survive a reopen', reopened.get().theme === 'light', reopened.get())
+  check('settings survive a reopen', reopened.get().preferredLanguage === 'bn', reopened.get())
 
   const stored = db.get('SELECT value FROM settings WHERE key = ?', 'app')
   const parsed = JSON.parse(String(stored?.['value'])) as { version: number }
   check('stored document is versioned', parsed.version === 1, parsed)
 
-  // A pre-versioning row stored the values object directly.
+  // A pre-versioning row stored the values object directly. It still carries
+  // `theme`, which is the realistic shape: the row was written by a build that
+  // had the setting, and this build does not.
   db.run(
     "INSERT INTO settings (key, value, updated_at) VALUES ('app', ?, 0) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-    JSON.stringify({ theme: 'dark', showThinking: false, pythonTimeoutMs: 12_345 })
+    JSON.stringify({
+      theme: 'dark',
+      preferredLanguage: 'bn',
+      showThinking: false,
+      pythonTimeoutMs: 12_345
+    })
   )
   const migrated = new SettingsStore(db)
-  check('legacy unwrapped document migrates', migrated.get().theme === 'dark', migrated.get())
+  check('legacy unwrapped document migrates', migrated.get().preferredLanguage === 'bn', migrated.get())
   check('legacy booleans migrate', migrated.get().showThinking === false)
   check('legacy numbers migrate', migrated.get().pythonTimeoutMs === 12_345)
   check('missing fields fall back to defaults', migrated.get().maxOutputTokens === DEFAULT_SETTINGS.maxOutputTokens)
+  // The retired key is stripped on read, so it cannot be re-persisted later.
+  check('retired theme is stripped from a legacy row', !('theme' in migrated.get()))
 
   // A row that is not JSON at all must not stop the app from starting.
   db.run(
@@ -139,7 +162,11 @@ function checkSettings(db: Database): void {
     '{not json'
   )
   const recovered = new SettingsStore(db)
-  check('unreadable settings fall back to defaults', recovered.get().theme === DEFAULT_SETTINGS.theme)
+  check(
+    'unreadable settings fall back to defaults',
+    recovered.get().showThinking === DEFAULT_SETTINGS.showThinking
+  )
+  check('unreadable settings still have no theme', !('theme' in recovered.get()))
 }
 
 function checkRecorder(db: Database): void {

@@ -32,7 +32,6 @@ export const ICON_NAMES = [
   'user',
   'text',
   'calculator',
-  'sun',
   'eye'
 ] as const
 
@@ -175,15 +174,6 @@ const PATHS: Record<IconName, JSX.Element> = {
       <rect x="5" y="2.75" width="14" height="18.5" rx="2" />
       <line x1="8" y1="6.75" x2="16" y2="6.75" />
       <path d="M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01" />
-    </>
-  ),
-
-  // Sun: a ring with rays, for appearance.
-  sun: (
-    <>
-      <circle cx="12" cy="12" r="4.25" />
-      <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5" />
-      <path d="M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8" />
     </>
   ),
 

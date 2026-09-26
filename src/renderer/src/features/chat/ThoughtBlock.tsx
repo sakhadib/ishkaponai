@@ -9,25 +9,19 @@
  * Behaviour:
  *  - **Open while the turn is running**, so the work is watchable. A block that
  *    is being written to and is invisible reads as a hang.
- *  - **Collapses a few seconds after the answer lands**, so the student gets a
- *    clean page to read but has not missed the last steps going by.
- *  - **Never fights the student.** The effect keys only on `streaming`, so it
- *    fires once when the turn settles. Re-opening it afterwards is not undone.
+ *  - **Then it stays open.** It used to fold away three seconds after the answer
+ *    landed, which meant a student part-way through reading the last step had it
+ *    taken out from under them. The screen is theirs; closing this is their
+ *    click, not the app's.
+ *  - Nothing here scrolls on its own. The whole page scrolls, once, and nothing
+ *    is ever out of reach behind an inner scrollbar.
  *
  * Gated by the `showThinking` setting; turning it off hides the evidence
  * entirely, which is the student's choice to make.
  */
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { FailedAttempt } from '@/features/chat/ExecutionCard'
 import { preview } from '@/lib/format'
-
-/**
- * How long the thought block stays open after a turn finishes.
- *
- * Long enough to glance at the final step, short enough not to get in the way.
- * This is the "X seconds" in the design; change it here and nowhere else.
- */
-const COLLAPSE_DELAY_MS = 3000
 
 export interface ThoughtBlockProps {
   reasoning: string
@@ -59,17 +53,10 @@ export function ThoughtBlock({
   failures
 }: ThoughtBlockProps): React.JSX.Element | null {
   const trimmed = reasoning.trim()
-  const [open, setOpen] = useState(streaming)
-
-  useEffect(() => {
-    if (streaming) {
-      setOpen(true)
-      return
-    }
-    // Let the last step land on screen before folding away.
-    const timer = setTimeout(() => setOpen(false), COLLAPSE_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [streaming])
+  // Open on arrival, and never closed by anything but the student. Seeding from
+  // `streaming` is enough: a stored turn renders already settled and stays open,
+  // a live one is open, and neither needs a timer to get there.
+  const [open, setOpen] = useState(true)
 
   if (!show) return null
 
@@ -83,7 +70,7 @@ export function ThoughtBlock({
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="thought__summary">
-        <span className="thought__label">{streaming ? 'Working…' : 'Thought'}</span>
+        <span className="thought__label">{streaming ? 'Thinking…' : 'Thinking'}</span>
         {stepCount > 0 ? <span className="thought__badge">{stepLabel(stepCount)}</span> : null}
         {failures.length > 0 ? (
           <span className="thought__badge thought__badge--muted">{failureLabel(failures)}</span>

@@ -44,7 +44,8 @@ const LIGHT = {
   onDanger: '#FFFFFF',
   success: '#10663A',
   warn: '#7A4A00',
-  info: '#1B4F6B'
+  info: '#1B4F6B',
+  bubble: '#E7F2F9'
 }
 
 /** [label, foreground, background, minimum, note] */
@@ -64,7 +65,12 @@ const CHECKS = (t) => [
   ['danger on page', t.danger, t.bg, 4.5, 'error text'],
   ['success on page', t.success, t.bg, 4.5, 'success text'],
   ['warn on page', t.warn, t.bg, 4.5, 'warning text'],
-  ['info on page', t.info, t.bg, 4.5, 'info text']
+  ['info on page', t.info, t.bg, 4.5, 'info text'],
+  // The student's own bubble. Three tones have to hold on it, not one: the
+  // question body, the timestamp, and the faint metadata if any is ever added.
+  ['body text in bubble', t.text, t.bubble, 4.5, 'the student question'],
+  ['muted text in bubble', t.muted, t.bubble, 4.5, ''],
+  ['faint text in bubble', t.faint, t.bubble, 4.5, 'the timestamp']
 ]
 
 let failures = 0

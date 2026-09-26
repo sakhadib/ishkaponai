@@ -54,7 +54,13 @@ export function MessageItem({ message, toolCalls, showThinking }: MessageItemPro
   return (
     <article className="message" data-role={message.role} data-status={message.status}>
       <header className="message__head">
-        <span className="message__role">{ROLE_LABEL[message.role]}</span>
+        {/* No role label on the student's own message: the bubble is on the
+            right, which already says whose turn it is, and a second signal
+            inside a small box is clutter. Answers keep theirs — with no box
+            around an answer, the label is the only thing marking the turn. */}
+        {message.role === 'user' ? null : (
+          <span className="message__role">{ROLE_LABEL[message.role]}</span>
+        )}
         <span className="message__time" title={formatDateTime(message.createdAt)}>
           {formatDateTime(message.createdAt)}
         </span>

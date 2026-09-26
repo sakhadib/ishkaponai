@@ -733,7 +733,7 @@ is in dark mode gets a dark title bar and window frame around a light app.
 
 Every colour in the stylesheet is a token — no literal colours in component
 rules. Contrast is **measured**, not eyeballed, with `tools/contrast.mjs`; all
-16 pairs clear WCAG AA 4.5:1. Re-run it after changing any colour. Mermaid
+19 pairs clear WCAG AA 4.5:1. Re-run it after changing any colour. Mermaid
 output is recoloured from the same tokens, and MathJax's SVG is filled with
 `currentColor` so it needs no per-glyph theming at all. The one exception is the
 parse-error span, where the plugin writes a literal hex inline and the
@@ -752,16 +752,34 @@ stylesheet overrides it with `!important`.
   language of the question, and is at most 6 words. If it fails, the
   truncated-first-message title stands. A session the student renamed is never
   re-titled.
+- **One surface per turn: the student's own bubble.** A user message is a
+  powder-blue rounded box, right-aligned, capped at **65%** of the transcript
+  column, sized to its text below that cap. An assistant turn has **no box, ever**
+  — no background, no border, no shadow, not while streaming either. An answer is
+  a document that happens to be in a transcript; boxing it made a worked solution
+  look like a card on a card. Turns are separated by space and by the role label.
+  The powder blue is deliberately desaturated away from `--accent-soft`, so a
+  bubble is never mistaken for an accent-tinted surface.
 - **An assistant message has two parts, and they are deliberately separate:**
   - A **Thought toggle** at the top, holding everything about *how* the answer
     was reached: the model's reasoning, every execution card with its Python and
-    output, and any attempt that failed and was retried. Labelled `Working…` and
-    open while the turn runs, so the work is watchable; it collapses
-    automatically a few seconds after the answer lands, so the student is not
-    left reading through scaffolding. Re-opening it is never undone.
+    output, and any attempt that failed and was retried. It is **text, not a
+    box** — a quiet label with a caret, clickable, and nothing around it. Open
+    while the turn runs, and **it stays open**: nothing closes it but the student.
+    It used to fold away three seconds after the answer landed, which took the
+    last steps out from under anyone part-way through reading them.
   - The **answer** below it: a human worked example in Markdown, prose and
     equations, no code, no tool references. This is what the student reads, and
-    it is the only part that is always visible.
+    it is the outer content of the turn.
+- **The steps are one level deeper again.** Inside the toggle, the cards sit
+  against a left rail, and each is a card of its own. The toggle is text, so
+  without that the nesting stops being visible.
+- **The screen belongs to the student.** There is exactly **one** scroller in the
+  chat — the transcript. No region inside a turn scrolls on its own: the toggle
+  body used to cap at 420px and scroll internally, which meant finding a second
+  scrollbar before you could read step six, and reaching its end scrolled the
+  page as a side effect. Nothing collapses, moves, or takes content away while
+  it is being read.
 - Failed tool attempts are summarised as a retry count inside the toggle, never
   as a step, and the raw SDK error is available only on hover. A model calling
   the tool wrongly and retrying is behaving correctly; surfacing

@@ -77,6 +77,14 @@
   --accent-text: #ffffff;
   --accent-border: #c3c2f7;
 
+  /* The student's own message. Powder blue, kept well away from `--accent-soft`
+     on purpose: the two sit near each other in a transcript, and if a bubble
+     read as the same colour as an accent-tinted surface the student would have
+     to work out which one they were looking at. A desaturated blue against the
+     indigo family is distinguishable at a glance and still obviously "yours". */
+  --bubble: #e7f2f9;
+  --bubble-border: #c2ddee;
+
   --danger: #b3261e;
   --danger-hover: #8f1e17;
   --danger-soft: #fdeceb;
@@ -958,32 +966,51 @@ select.field__input {
 
 /* --- Messages ------------------------------------------------------------- */
 
-/* An assistant answer is a document, not a chat bubble: no heavy border, no
-   filled card. A subtle lift and a rule is enough to separate turns, which
-   keeps a long transcript from looking like a stack of boxes. */
+/**
+ * A turn.
+ *
+ * The base is deliberately empty — no surface, no border, no shadow. Only the
+ * student's own message is a bubble; an answer is a document that happens to be
+ * in a transcript, and boxing it turned a worked solution into a card on a card.
+ * Turns are separated by space and by the role label instead.
+ */
 .message {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-lg);
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
+  padding: var(--space-sm) 0;
 }
 
-.message[data-role='assistant'] {
-  background: var(--bg-elevated);
-  border-color: var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-}
-
+/* The one box in the transcript. Right-aligned and capped at 65% of the column
+   so a long question still leaves the left edge visible — which is what tells
+   you at a glance which turn you are reading. */
 .message[data-role='user'] {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
+  align-self: flex-end;
+  max-width: 65%;
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--bubble-border);
+  border-radius: var(--radius-lg);
+  background: var(--bubble);
 }
 
+/* A short question should not stretch to the cap. `align-self: flex-end`
+   already gives that — it replaces the default `stretch` on the cross axis, so
+   the bubble sizes to its text and `max-width` still clamps it. No `width:
+   fit-content` needed, and no second measure fighting the 65%. */
+.message[data-role='user'] .message__head {
+  justify-content: flex-end;
+}
+
+/* Nothing here, on purpose. An assistant turn has no surface of any kind. */
+.message[data-role='assistant'] {
+  max-width: 100%;
+}
+
+/* There is deliberately no live-turn highlight. It used to be a ring and a
+   shadow, which meant the one moment the answer was least finished was the one
+   moment it was most heavily boxed. "Reading the problem…" already says it. */
 .message--live {
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 1px var(--accent-soft), var(--shadow-sm);
+  max-width: 100%;
 }
 
 .message__head {
@@ -1012,7 +1039,6 @@ select.field__input {
 }
 
 .message__user-text {
-  max-width: var(--measure-prose);
   margin: 0;
   font-size: var(--text-md);
   line-height: var(--leading-normal);
@@ -1058,17 +1084,25 @@ select.field__input {
    reasoning, the execution cards with their code and output, and any failed
    attempt. The answer renders below it, clean. */
 
+/**
+ * The disclosure is text, not a box.
+ *
+ * It used to be a bordered card with a sunken background, which put three
+ * surfaces in one turn — the answer's card, the thought's card, and a card per
+ * step inside it. The only surface in a turn is the student's own bubble; the
+ * answer and the label that reveals the working are both on the page.
+ */
 .thought {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  background: var(--bg-sunken);
+  border: none;
+  border-radius: 0;
+  background: none;
 }
 
 .thought__summary {
   display: flex;
   gap: 8px;
   align-items: baseline;
-  padding: 6px 10px;
+  padding: 2px 0;
   cursor: pointer;
   font-size: var(--text-sm);
   list-style: none;
@@ -1078,8 +1112,26 @@ select.field__input {
   display: none;
 }
 
+.thought__summary:hover .thought__label {
+  color: var(--text);
+}
+
+/* A caret, so "clicking this reveals something" is legible before you click.
+   A text glyph rather than an icon: this is the quietest element in the turn and
+   an SVG would outweigh the label it sits next to. */
+.thought__summary::before {
+  content: '▸';
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.thought[open] > .thought__summary::before {
+  transform: rotate(90deg);
+}
+
 .thought__label {
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-weight: 500;
 }
 
@@ -1105,10 +1157,15 @@ select.field__input {
   white-space: nowrap;
 }
 
+/**
+ * No `max-height` and no `overflow-y`. This used to cap the body at 420px and
+ * scroll inside itself, which put a second scroller inside the transcript: you
+ * had to find the inner one before you could read step six, and reaching its
+ * bottom scrolled the page as a side effect. The screen belongs to the student,
+ * so the thought grows to whatever length it is and the page scrolls once.
+ */
 .thought__body {
-  max-height: 420px;
-  padding: 0 10px 10px;
-  overflow-y: auto;
+  padding: var(--space-2xs) 0 var(--space-sm);
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
@@ -1117,18 +1174,24 @@ select.field__input {
   white-space: pre-wrap;
 }
 
-/* The cards are full-bleed inside the toggle: the toggle already provides the
-   frame, so a second border per card reads as noise. */
+/* One level in. A rail down the left edge, so "the steps are inside the thought"
+   is something you see rather than something you infer from indentation. */
 .thought__steps {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 0 var(--space-xs);
+  padding-left: var(--space-md);
+  border-left: 1px solid var(--border);
 }
 
+/* And one level deeper again: each step is a card of its own. They used to be
+   borderless, on the reasoning that the toggle supplied the frame — but the
+   toggle is text now, so without this the steps have no surface at all and the
+   nesting stops being visible. */
 .thought__steps .exec-card {
-  border: none;
-  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
 }
 
 .thought__failures {

@@ -1345,8 +1345,8 @@ select.field__input {
 }
 
 .composer__input {
-  /* One line of body text at the answer's size. Every height below is a
-     multiple of it, so the cap is a line count and not a magic number. */
+  /* One line of body text at the answer's size. Every height here is a multiple
+     of it, so the cap is a line count and not a magic number. */
   --composer-line: calc(var(--text-md) * var(--leading-normal));
 
   flex: 1;
@@ -1354,8 +1354,13 @@ select.field__input {
      spaces — refuses to shrink and pushes the button out of the box. */
   min-width: 0;
   min-height: var(--composer-line);
-  /* Seven lines, then scroll inside. Long enough for a multi-part problem, short
-     enough that a full composer does not push the conversation off the screen. */
+  /**
+   * Seven lines, then scroll inside. This is the **only** definition of the cap:
+   * `Composer.tsx` reads it back with `getComputedStyle` and clamps to it, rather
+   * than carrying a second copy of the number. Long enough for a multi-part
+   * problem, short enough that a full composer does not push the conversation
+   * off the screen.
+   */
   max-height: calc(7 * var(--composer-line));
   padding: 0;
   border: none;
@@ -1365,10 +1370,11 @@ select.field__input {
   font-size: var(--text-md);
   line-height: var(--leading-normal);
   resize: none;
-  /* Shown only once the content passes `max-height`. The line box is flush with
-     the textarea's edges on purpose — the box's own padding is the inset, and
-     padding here would make the line height and the cap disagree. */
-  overflow-y: auto;
+  /* `hidden`, not `auto`: the growth is assigned in pixels by the composer, which
+     also sets this inline once it knows whether there is more below the cap. The
+     value here is only what shows for the frame before that runs, and `hidden`
+     is right for it — a one-line composer must not flash a scrollbar. */
+  overflow-y: hidden;
 }
 
 .composer__input::placeholder {

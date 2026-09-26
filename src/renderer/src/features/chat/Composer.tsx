@@ -34,18 +34,38 @@ export function Composer({
   const textarea = useRef<HTMLTextAreaElement>(null)
 
   /**
-   * Grow with the content.
+   * Grow with the content, up to the stylesheet's cap, then scroll inside.
    *
-   * `height: auto` makes the browser recompute the intrinsic height from the
-   * text. Everything past that is CSS: `max-height` caps it at seven lines and
-   * `overflow-y: auto` scrolls inside it from there. Keeping the cap out of this
-   * file means there is no pixel count here to drift out of step with the
-   * stylesheet, and changing the line limit is a one-line CSS edit.
+   * The height has to be assigned in pixels, not left to `height: auto`. A
+   * `<textarea>`'s intrinsic height comes from its `rows` attribute, not from its
+   * content, so `height: auto` on its own leaves the box at one line however much
+   * is typed into it — and setting it to the value it already holds is a no-op,
+   * so nothing even recomputes. The explicit measurement below is what makes it
+   * grow.
+   *
+   * `useLayoutEffect`, not `useEffect`: this writes a layout property the browser
+   * has to act on before the frame is painted, or the box visibly jumps on every
+   * keystroke.
    */
   useLayoutEffect(() => {
     const element = textarea.current
     if (element === null) return
+
+    // Reset first, so the `scrollHeight` read below is the full height of the
+    // content rather than whatever the element is currently clipped to.
     element.style.height = 'auto'
+
+    // The cap stays in the stylesheet as `max-height` and is read back here
+    // rather than restated as a number. Two definitions of "seven lines" is two
+    // definitions that drift; `getComputedStyle` resolves the calc to pixels.
+    const limit = Number.parseFloat(window.getComputedStyle(element).maxHeight)
+    const content = element.scrollHeight
+    const ceiling = Number.isFinite(limit) ? limit : content
+
+    element.style.height = `${Math.min(content, ceiling)}px`
+    // Scroll only once there is genuinely more below, so the gutter does not
+    // appear while the box is still growing towards the cap.
+    element.style.overflowY = content > ceiling ? 'auto' : 'hidden'
   }, [value])
 
   useEffect(() => {

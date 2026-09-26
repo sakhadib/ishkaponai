@@ -14,9 +14,38 @@ files:
 
 asar: true
 
-# Pyodide is loaded by the agent host via WebAssembly and reads its runtime
-# assets (pyodide.asm.wasm, python_stdlib.zip, package wheels) off disk.
-# Unpack it so the WASM loader always sees real files rather than asar paths.
+# The scientific wheels (numpy, sympy, mpmath) that the calculation sandbox needs.
+#
+# These are 7 MB of .whl files that `src/agent/dev/fetch-wheels.mjs` downloads and
+# SHA-256 verifies at build time. They are deliberately tracked in git, because a
+# packaged build has to ship them and there is no network at run time: the agent
+# host points Pyodide at a *local* directory, so a missing wheel is an ENOENT
+# rather than a download. That property is the whole reason the sandbox cannot
+# fetch remote code, and it only holds if the files are actually there.
+#
+# The destination name is not free. `wheelDirCandidates()` in src/agent/wheels.ts
+# searches, in order: $ISHKAPON_PYODIDE_WHEELS, then
+# `join(process.resourcesPath, 'pyodide-packages')`, then the repository
+# `src/agent/dev/wheels` (dev only), then the pyodide package dir. In a packaged
+# app only the second can match, so `to:` must stay `pyodide-packages`.
+#
+# `extraResources` and not `asarUnpack`, deliberately. asarUnpack only unpacks
+# something already inside the asar; it cannot put a file there. The earlier
+# asarUnpack rule for the wheels could never have worked, and because a missing
+# wheel directory is not a fatal error - `resolveWheelSource()` reports
+# `exists: false` and carries on - the app would have launched, looked healthy,
+# and then failed every single calculation. Renaming the folder here breaks the
+# build loudly instead.
+extraResources:
+  - from: src/agent/dev/wheels
+    to: pyodide-packages
+    filter:
+      - '*.whl'
+
+# Pyodide's own runtime (pyodide.asm.wasm, python_stdlib.zip) is loaded by the
+# agent host via WebAssembly and read off disk, so it has to be real files rather
+# than asar paths. This one is a genuine unpack: the npm package is inside the
+# asar as a production dependency, and the WASM loader cannot read through it.
 asarUnpack:
   - node_modules/pyodide/**
 

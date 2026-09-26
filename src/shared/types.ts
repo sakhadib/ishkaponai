@@ -202,6 +202,21 @@ export interface ModelInfo {
   supportsTools: boolean
 }
 
+/**
+ * What `listModels` returns: the catalog, and anything the student needs to know
+ * about how it was obtained.
+ *
+ * `notice` exists because falling back *silently* is indistinguishable from
+ * having a short catalog. When OpenRouter cannot be reached, main substitutes a
+ * short bundled list; with no explanation the student concludes the app only
+ * supports those few models. A stale-but-real catalog reports itself the same
+ * way, so "this list may be out of date" is never a guess.
+ */
+export interface ModelCatalogResult {
+  readonly models: ModelInfo[]
+  readonly notice: string | null
+}
+
 // ---------------------------------------------------------------------------
 // App info
 // ---------------------------------------------------------------------------

@@ -112,6 +112,11 @@ export function ModelPicker({
         />
       ) : null}
 
+      {/* The count, so a six-model fallback and a full catalog never look alike. */}
+      <p className="settings__count">
+        {ordered.length} tool-capable model{ordered.length === 1 ? '' : 's'} listed.
+      </p>
+
       <details className="custom-model">
         <summary className="custom-model__summary">Enter a model ID manually</summary>
         <div className="custom-model__row">
@@ -157,7 +162,9 @@ function ModelGroup({
 }): React.JSX.Element {
   return (
     <fieldset className="model-group">
-      <legend className="model-group__legend">{title}</legend>
+      <legend className="model-group__legend">
+        {title} <span className="model-group__count">{models.length}</span>
+      </legend>
       {models.map((model) => (
         <ModelRow
           key={model.id}

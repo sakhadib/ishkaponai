@@ -4,7 +4,7 @@ import type { CreateSessionOptions, IshkaponApi, SetApiKeyResult } from '@shared
 import type {
   AgentEvent,
   AppInfo,
-  ModelInfo,
+  ModelCatalogResult,
   SecretStatus,
   Session,
   SessionDetail,
@@ -32,7 +32,7 @@ const api: IshkaponApi = {
     ipcRenderer.invoke(IpcChannel.SecretSetApiKey, key),
   clearApiKey: (): Promise<void> => ipcRenderer.invoke(IpcChannel.SecretClearApiKey),
 
-  listModels: (forceRefresh?: boolean): Promise<ModelInfo[]> =>
+  listModels: (forceRefresh?: boolean): Promise<ModelCatalogResult> =>
     ipcRenderer.invoke(IpcChannel.ModelsList, forceRefresh === true),
 
   listSessions: (): Promise<Session[]> => ipcRenderer.invoke(IpcChannel.SessionList),

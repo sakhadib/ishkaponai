@@ -69,8 +69,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (get().modelsLoading) return
     set({ modelsLoading: true, error: null })
     try {
-      const models = await call('Loading the model list', (api) => api.listModels(forceRefresh))
-      set({ models, modelsLoading: false, modelsNotice: null })
+      // `notice` is how main says "this list is not the real one". It arrives
+      // alongside a usable list rather than instead of one, so a failed fetch
+      // must not clear the models — only the throw path does that.
+      const result = await call('Loading the model list', (api) => api.listModels(forceRefresh))
+      set({ models: result.models, modelsLoading: false, modelsNotice: result.notice })
     } catch (error) {
       set({
         modelsLoading: false,

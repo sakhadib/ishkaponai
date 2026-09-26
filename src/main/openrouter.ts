@@ -12,7 +12,7 @@
  * interpolated into an error message. Every error surfaced from this module is
  * written for the student to read.
  */
-import type { ModelInfo } from '@shared/types'
+import type { ModelCatalogResult, ModelInfo } from '@shared/types'
 import type { SetApiKeyResult } from '@shared/ipc'
 
 /**
@@ -217,7 +217,13 @@ export const FALLBACK_MODELS: readonly ModelInfo[] = Object.freeze([
 let cache: { at: number; models: ModelInfo[] } | null = null
 
 /** De-duplicates concurrent callers so a cold start issues one request. */
-let inFlight: Promise<ModelInfo[]> | null = null
+let inFlight: Promise<ModelCatalogResult> | null = null
+
+/**
+ * The catalog, plus anything the student needs to know about how it was
+ * obtained. The rationale is on `ModelCatalogResult` in shared/types.
+ */
+export type { ModelCatalogResult }
 
 /**
  * Returns the tool-capable model catalog, from cache when fresh.
@@ -225,9 +231,9 @@ let inFlight: Promise<ModelInfo[]> | null = null
  * @param forceRefresh Bypasses the TTL. Wired to the preload's
  *   `listModels(forceRefresh?)`, so the model picker can offer a refresh.
  */
-export async function listModels(forceRefresh = false): Promise<ModelInfo[]> {
+export async function listModels(forceRefresh = false): Promise<ModelCatalogResult> {
   if (!forceRefresh && cache && Date.now() - cache.at < MODEL_CACHE_TTL_MS) {
-    return cache.models
+    return { models: cache.models, notice: null }
   }
 
   if (inFlight) return inFlight
@@ -236,11 +242,27 @@ export async function listModels(forceRefresh = false): Promise<ModelInfo[]> {
     try {
       const models = await fetchModels()
       cache = { at: Date.now(), models }
-      return models
+      return { models, notice: null }
     } catch (error) {
-      console.warn('[models] using the bundled fallback list:', describeError(error))
+      const reason = describeError(error)
+      console.warn('[models] falling back to the bundled list:', reason)
+
       // A previously good catalog is better than the fallback, even if stale.
-      return cache ? cache.models : [...FALLBACK_MODELS]
+      if (cache) {
+        return {
+          models: cache.models,
+          notice:
+            `Showing the last catalog that loaded successfully, because OpenRouter could not be ` +
+            `reached just now (${reason}). It may be out of date — press Refresh to try again.`
+        }
+      }
+      return {
+        models: [...FALLBACK_MODELS],
+        notice:
+          `Only a short built-in list is shown, because OpenRouter could not be reached ` +
+          `(${reason}). Check your internet connection, then press Refresh. You can still enter a ` +
+          `model ID by hand below.`
+      }
     } finally {
       inFlight = null
     }

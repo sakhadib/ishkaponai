@@ -5,7 +5,7 @@
 import type {
   AgentEvent,
   AppInfo,
-  ModelInfo,
+  ModelCatalogResult,
   SecretStatus,
   Session,
   SessionDetail,
@@ -76,7 +76,8 @@ export interface IshkaponApi {
   clearApiKey(): Promise<void>
 
   // --- Models ---
-  listModels(forceRefresh?: boolean): Promise<ModelInfo[]>
+  /** The tool-capable catalog, plus a notice if something was substituted. */
+  listModels(forceRefresh?: boolean): Promise<ModelCatalogResult>
 
   // --- Sessions ---
   listSessions(): Promise<Session[]>

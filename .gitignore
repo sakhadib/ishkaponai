@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Electron caches
+.electron/
+.electron-vite/
+electron-builder.yml.bak
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime / user data
+*.local
+.DS_Store
+Thumbs.db
+UserData/
+userData/
+
+# Test output
+coverage/
+.nyc_output/
+
+# Editor / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx

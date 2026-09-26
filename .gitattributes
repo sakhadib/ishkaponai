@@ -1,0 +1,18 @@
+# Normalize line endings to LF in the repository and in the working tree.
+# Node tooling, shell scripts and the electron-builder YAML config are all
+# LF-sensitive, and CRLF churn on Windows produces noisy phantom diffs.
+* text=auto eol=lf
+
+# Binary assets must never be touched.
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+
+# Keep lockfiles diff-friendly and unfiltered.
+package-lock.json -diff linguist-generated=true

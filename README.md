@@ -32,6 +32,33 @@ npm run dev     # start the app with hot reload
 `npm run dev` starts the Vite dev server for the renderer, compiles the main and
 preload processes, and launches Electron pointed at the dev server.
 
+### Development keeps its own data folder
+
+`npm run dev` and an installed copy of the app write to **different directories**:
+
+| Build | Windows folder |
+| ----- | -------------- |
+| Installed (MSI) | `%APPDATA%\ISHKAPON-AI\` |
+| `npm run dev` | `%APPDATA%\ishkapon-ai-dev\` |
+
+This is not a preference, it is a correction. Electron derives `userData` from the
+app name, and the two builds disagreed about it: `electron-builder` ships
+`productName: "ISHKAPON AI"` as the name `ISHKAPON-AI`, while the repo says
+`ishkapon-ai`. Those differ only in case, so on NTFS and on a default-formatted Mac
+volume they are the *same folder* — one SQLite database, one encrypted API key, one
+usage ledger, shared between a developer's machine and a student's install.
+
+The symptom was an API key and chat history appearing in a freshly installed copy.
+The giveaway was that the key still *worked*: Windows DPAPI is scoped to the user
+account rather than to the app, so either build can decrypt what the other wrote.
+
+`src/bootstrap.cjs` redirects `userData` for unpackaged runs, before the
+single-instance lock is requested — the lock file lives under `userData`, so
+redirecting afterwards would separate the databases but leave both builds
+contending for one lock. **The installed path is deliberately not touched**, so
+updating the app never moves anyone's chats. `src/main/dev/userdata-check.ts` holds
+this in place.
+
 ## Scripts
 
 | Script               | Purpose                                                  |
@@ -118,7 +145,7 @@ to remove it deliberately.
     │   ├── secrets.ts        #   API key via Electron safeStorage
     │   ├── usage.ts          #   Token ledger, independent of transcripts
     │   ├── agent-host.ts     #   Supervises the agent child process
-    │   └── dev/              #   Main-process checks
+    │   └── dev/              #   Main-process checks (core, db, context, userdata)
     ├── agent/                # Runs as a child process. Owns the turn loop
     │   ├── host.ts           #   The loop: stream, tool calls, step limit
     │   ├── tools.ts          #   The single `python` tool

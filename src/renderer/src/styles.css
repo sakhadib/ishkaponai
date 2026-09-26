@@ -421,6 +421,14 @@ a:hover {
   color: var(--text-inverse);
 }
 
+/* Wireframe icons: stroke only, no fill, inheriting `currentColor` so an icon
+   beside a label reads as part of that label. Sits at the muted text weight. */
+.icon {
+  flex-shrink: 0;
+  color: currentColor;
+  vertical-align: middle;
+}
+
 .icon-button {
   width: 26px;
   height: 26px;
@@ -433,9 +441,10 @@ a:hover {
   background: transparent;
   color: var(--text-faint);
   font: inherit;
-  font-size: var(--text-base);
   line-height: 1;
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .icon-button:hover {
@@ -580,45 +589,202 @@ select.field__input {
   overflow-wrap: anywhere;
 }
 
-/* --- Sidebar -------------------------------------------------------------- */
+/* --- Sidebar --------------------------------------------------------------
+   Structure, top to bottom: brand, new chat, rule, search, then the scrolling
+   list split into Pinned and History, then settings pinned to the foot.
 
-/* Recessed rather than raised: the sidebar is navigation, and the conversation
-   is the thing being looked at. A sunken ground and a single rule are quieter
-   than a card would be. */
+   The two action rows (new chat, settings) are deliberately not buttons. A
+   filled primary button on every screen for the most predictable action in the
+   app is noise; these read as quiet text rows that happen to be clickable. The
+   full-row hit area stays, so they are still easy to click. */
+
 .sidebar {
   display: flex;
   min-height: 0;
   flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-sm);
+  padding: var(--space-lg) 0 var(--space-sm);
   border-right: 1px solid var(--border);
   background: var(--bg-sunken);
 }
 
-.sidebar__top {
+/* --- Brand and search -----------------------------------------------------
+   One row, two states. Search replaces the brand in place, so opening it adds
+   no height and the rail does not jump under the pointer. */
+
+.sidebar__head {
   display: flex;
+  gap: var(--space-2xs);
+  align-items: center;
+  min-height: 26px;
+  padding: 0 var(--space-sm) var(--space-md) var(--space-lg);
+}
+
+.sidebar__brand {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: var(--space-2xs);
+  align-items: baseline;
+  user-select: none;
+}
+
+.sidebar__brand-mark {
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.sidebar__brand-name {
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+/* The `.ai` reads as a qualifier rather than part of the wordmark, so it is
+   held at faint weight. */
+.sidebar__brand-tld {
+  color: var(--text-faint);
+  font-size: var(--text-md);
+  font-weight: 400;
+}
+
+/* --- Quiet action rows ---------------------------------------------------- */
+
+.sidebar__action {
+  display: flex;
+  width: 100%;
   gap: var(--space-sm);
+  align-items: center;
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.sidebar__action:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* The icon carries the meaning at rest, so it is held at the same faint weight
+   as the label and brightens with it. */
+.sidebar__action .icon {
+  color: currentColor;
+  opacity: 0.9;
 }
 
 .sidebar__new {
+  /* Sits directly under the brand, so it needs no extra top margin. */
+  margin-top: var(--space-2xs);
+}
+
+.sidebar__settings {
+  margin-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* --- Rules ---------------------------------------------------------------- */
+
+/* Hairlines, not borders: a full-width rule inside a sunken rail needs to be
+   lighter than the rail's own right-hand border or the two read as a box. */
+.sidebar__rule {
+  height: 1px;
+  margin: var(--space-sm) var(--space-lg);
+  background: var(--border-subtle);
+}
+
+.sidebar__search-toggle {
+  flex-shrink: 0;
+}
+
+/* The search field itself: no border, no fill, sitting on the sunken rail.
+   A boxed input here would reintroduce exactly the block of chrome the icon
+   button was there to remove. */
+.sidebar__search {
+  display: flex;
   flex: 1;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-left: var(--space-2xs);
 }
 
-.sidebar__search .field__input {
-  background: var(--bg-elevated);
+.sidebar__search-icon {
+  color: var(--text-faint);
 }
 
-.sidebar__list {
+.sidebar__search-input {
+  min-width: 0;
+  flex: 1;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.sidebar__search-input::placeholder {
+  color: var(--text-faint);
+}
+
+/* The input's own outline is suppressed so it can sit flush on the rail, so the
+   focus ring is drawn on the wrapper instead. Without this the field would have
+   no visible focus indicator at all, which is not an acceptable trade for
+   removing a border. */
+.sidebar__search:focus-within {
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 var(--ring-width) var(--ring);
+}
+
+.sidebar__search:focus-within .sidebar__search-icon {
+  color: var(--accent);
+}
+
+/* --- Sections ------------------------------------------------------------- */
+
+.sidebar__scroll {
   display: flex;
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
   overflow-y: auto;
-  padding-right: var(--space-2xs);
+  padding: 0 var(--space-sm);
+}
+
+.sidebar__section {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar__section-title {
+  margin: 0;
+  padding: var(--space-sm) var(--space-sm) var(--space-2xs);
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .sidebar__empty {
+  margin: 0;
   padding: var(--space-md) var(--space-sm);
   color: var(--text-faint);
   font-size: var(--text-sm);
@@ -695,10 +861,6 @@ select.field__input {
   align-items: center;
   color: var(--text-faint);
   font-size: var(--text-xs);
-}
-
-.session__pin-mark {
-  color: var(--warn);
 }
 
 .session__live {

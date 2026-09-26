@@ -34,7 +34,12 @@
   font-display: swap;
 }
 
-/* --- Tokens: light -------------------------------------------------------- */
+/* --- Tokens: light --------------------------------------------------------
+   Verified with `node tools/contrast.mjs`: all 16 pairs clear WCAG AA 4.5:1.
+   Re-run it after changing any colour here. The `--text-faint` value is
+   deliberately darker than a "faint" label suggests — at the old #78818f it
+   measured 3.9:1 on the page background and failed, and it carries timestamps
+   and collapsed previews, which are body text by any reading. */
 :root,
 [data-theme='light'] {
   color-scheme: light;
@@ -42,110 +47,174 @@
   --font-sans: 'Roboto', 'Kalpurush', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
 
-  --bg: #f4f6fb;
+  --bg: #f6f7fc;
   --bg-elevated: #ffffff;
-  --bg-sunken: #e9edf6;
-  --bg-subtle: #eef1f8;
-  --bg-inset: #e2e7f2;
-  --bg-hover: #e4e9f4;
-  --bg-active: #d8dff0;
+  --bg-sunken: #eaedf6;
+  --bg-subtle: #f0f2f9;
+  --bg-inset: #e3e7f2;
+  --bg-hover: #e9ecf6;
+  --bg-active: #dde2f0;
 
-  --border: #d3dae8;
-  --border-strong: #b3bdcf;
-  --border-subtle: #e4e9f2;
+  --border: #dce0ec;
+  --border-strong: #bfc6d8;
+  --border-subtle: #e8ebf3;
 
-  --text: #14181f;
-  --text-muted: #545d6e;
-  --text-faint: #78818f;
+  --text: #14182a;
+  --text-muted: #4a5266;
+  --text-faint: #5f6880;
   --text-inverse: #ffffff;
 
-  --accent: #2f4fd8;
-  --accent-hover: #2440b8;
-  --accent-soft: #e6ebfd;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: #eaeafd;
   --accent-text: #ffffff;
-  --accent-border: #a9b8f0;
+  --accent-border: #c3c2f7;
 
   --danger: #b3261e;
   --danger-hover: #8f1e17;
   --danger-soft: #fdeceb;
   --danger-border: #f0b5b1;
 
-  --warn: #8a5300;
+  --warn: #7a4a00;
   --warn-soft: #fdf3e0;
   --warn-border: #e8c78c;
 
-  --success: #1a6b3c;
+  --success: #10663a;
   --success-soft: #e8f5ee;
   --success-border: #a5d5bb;
 
-  --info: #1f5673;
+  --info: #1b4f6b;
   --info-soft: #e7f1f7;
   --info-border: #a5c8da;
 
-  --code-bg: #eef1f8;
+  --code-bg: #f0f2f9;
   --code-text: #1d2430;
   --code-border: #dde3ee;
 
-  --shadow-sm: 0 1px 2px rgb(20 24 31 / 8%);
-  --shadow-md: 0 4px 14px rgb(20 24 31 / 10%);
-  --shadow-lg: 0 12px 34px rgb(20 24 31 / 14%);
+  /* Tinted neutrals, not pure grey: a whisper of the indigo keeps large flat
+     areas from reading as dead. Shadows stay neutral so they do not muddy. */
+  --shadow-sm: 0 1px 2px rgb(20 24 42 / 6%), 0 1px 1px rgb(20 24 42 / 4%);
+  --shadow-md: 0 2px 4px rgb(20 24 42 / 5%), 0 6px 16px rgb(20 24 42 / 8%);
+  --shadow-lg: 0 8px 20px rgb(20 24 42 / 8%), 0 18px 44px rgb(20 24 42 / 12%);
 
-  --radius-sm: 5px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
 }
 
 /* --- Tokens: dark --------------------------------------------------------- */
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --bg: #10141c;
-  --bg-elevated: #171d28;
-  --bg-sunken: #0b0e14;
-  --bg-subtle: #1d2432;
-  --bg-inset: #232b3a;
-  --bg-hover: #222a39;
-  --bg-active: #2b3547;
+  --bg: #0c0f1a;
+  --bg-elevated: #151a2b;
+  --bg-sunken: #090b13;
+  --bg-subtle: #1b2133;
+  --bg-inset: #232a3e;
+  --bg-hover: #1f2639;
+  --bg-active: #2a3248;
 
-  --border: #2b3446;
-  --border-strong: #3d4a61;
-  --border-subtle: #212938;
+  --border: #262e44;
+  --border-strong: #3a4460;
+  --border-subtle: #1c2233;
 
-  --text: #e6eaf2;
-  --text-muted: #a2adc2;
-  --text-faint: #7c889e;
-  --text-inverse: #0b0e14;
+  --text: #e9ecf6;
+  --text-muted: #a8b2c8;
+  --text-faint: #8a94ab;
+  --text-inverse: #0b0e1a;
 
-  --accent: #7d94ff;
-  --accent-hover: #98a9ff;
-  --accent-soft: #1d2740;
-  --accent-text: #0b1020;
-  --accent-border: #3a4a78;
+  /* Lighter and slightly cooler than the light-mode accent: at #4F46E5 on a
+     near-black ground it measures 3.4:1 and fails for a link. */
+  --accent: #8b8cf9;
+  --accent-hover: #a5a5fa;
+  --accent-soft: #1e2140;
+  --accent-text: #0b0e1a;
+  --accent-border: #3e3f7a;
 
   --danger: #ff8a80;
   --danger-hover: #ffa39b;
   --danger-soft: #2c1a1a;
   --danger-border: #6a3535;
 
-  --warn: #e8b768;
+  --warn: #e0b36b;
   --warn-soft: #2a2114;
   --warn-border: #6a5327;
 
-  --success: #7bd6a4;
+  --success: #6fd79c;
   --success-soft: #14291f;
   --success-border: #2f5f45;
 
-  --info: #8cc4e6;
+  --info: #7fc0e4;
   --info-soft: #13232c;
   --info-border: #2f5468;
 
-  --code-bg: #1b2130;
+  --code-bg: #1b2133;
   --code-text: #d8e0ee;
   --code-border: #29314599;
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-md: 0 4px 14px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 12px 34px rgb(0 0 0 / 55%);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 45%);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 35%), 0 6px 18px rgb(0 0 0 / 45%);
+  --shadow-lg: 0 10px 24px rgb(0 0 0 / 45%), 0 20px 50px rgb(0 0 0 / 60%);
+}
+
+/* --- System scales ---------------------------------------------------------
+   Theme-independent. Anything that is a rhythm rather than a colour lives
+   here, so spacing and type stay consistent across both themes. */
+
+/* Spacing. Standard density, not spacious: a worked solution is already tall,
+   and generous padding costs a student a screen of scrolling per answer. */
+:root {
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 6px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* Type scale. 16px base, 1.6 line height: the dataset's floor for body text
+     is 16px, and this app is read for minutes at a time. */
+  --text-xs: 0.75rem;   /* 12px - metadata only, never prose */
+  --text-sm: 0.8125rem; /* 13px - secondary UI */
+  --text-base: 0.9375rem; /* 15px - dense UI chrome */
+  --text-md: 1rem;      /* 16px - answer body */
+  --text-lg: 1.125rem;  /* 18px - answer emphasis */
+  --text-xl: 1.375rem;  /* 22px - answer h3 */
+  --text-2xl: 1.75rem;  /* 28px - answer h2/h1 */
+  --text-3xl: 2.125rem; /* 34px - page title */
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.4;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.75;
+
+  /* Reading measure. A worked solution is a single column of prose and
+     equations; full-bleed lines make it hard to track back to the next one. */
+  --measure-prose: 74ch;
+  --measure-tight: 62ch;
+
+  /* Layout */
+  --sidebar-w: 268px;
+  --titlebar-h: 38px;
+
+  /* Focus. One ring, everywhere, never removed. */
+  --ring-width: 2px;
+  --ring-offset: 2px;
+  --ring: var(--accent);
+  --ring-danger: var(--danger);
+
+  /* Motion. Durations are short on purpose: this is a tool, not a showcase. */
+  --dur-fast: 110ms;
+  --dur-normal: 180ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --z-sticky: 10;
+  --z-overlay: 100;
+  --z-modal: 200;
 }
 
 /* --- Base ----------------------------------------------------------------- */
@@ -169,7 +238,7 @@ body {
   /* Latin renders in Roboto, Bangla in Kalpurush, by per-character fallback.
      The order matters: Roboto first, or Bangla would fall through to it. */
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: var(--text-base);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -189,15 +258,44 @@ p {
 
 a {
   color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
 }
 
+a:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* One focus treatment for the whole app. `:focus-visible` rather than `:focus`
+   so a mouse click does not leave a ring, but a keyboard does — and there is
+   never a `outline: none` anywhere in this file. */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: var(--ring-width) solid var(--ring);
+  outline-offset: var(--ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Danger controls get a danger ring, so the ring itself carries meaning. */
+.btn--danger:focus-visible,
+.field__input[aria-invalid='true']:focus-visible {
+  outline-color: var(--ring-danger);
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Honour the OS motion setting. The Thought block's auto-collapse and the
+   streaming caret are the only things that move on their own; both stop. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Scrollbars, so the panes do not fight the theme. */
@@ -222,7 +320,7 @@ a {
 
 .app {
   display: grid;
-  grid-template-columns: 272px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   height: 100%;
   overflow: hidden;
 }
@@ -237,21 +335,36 @@ a {
 
 /* --- Buttons -------------------------------------------------------------- */
 
+/* One button, four states, short transitions. Press feedback is a 1px nudge
+   rather than a scale: at desktop sizes a scaling button reads as a toy. */
 .btn {
-  padding: 7px 14px;
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: var(--space-xs) var(--space-lg);
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: var(--bg-subtle);
   color: var(--text);
   font: inherit;
-  font-size: 0.86rem;
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: 550;
   white-space: nowrap;
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .btn:hover:not(:disabled) {
   background: var(--bg-hover);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn:disabled {
@@ -262,6 +375,7 @@ a {
 .btn--primary {
   background: var(--accent);
   color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn--primary:hover:not(:disabled) {
@@ -276,6 +390,7 @@ a {
 
 .btn--ghost:hover:not(:disabled) {
   background: var(--bg-subtle);
+  border-color: var(--border-strong);
   color: var(--text);
 }
 
@@ -318,7 +433,7 @@ a {
   background: transparent;
   color: var(--text-faint);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   line-height: 1;
   cursor: pointer;
 }
@@ -340,7 +455,7 @@ a {
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   cursor: pointer;
 }
 
@@ -376,14 +491,14 @@ a {
 
 .field__label {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
 .field__hint {
   margin: 0;
   color: var(--text-faint);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   line-height: 1.45;
 }
 
@@ -395,7 +510,7 @@ a {
   background: var(--bg-elevated);
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .field__input::placeholder {
@@ -431,7 +546,7 @@ select.field__input {
 .switch__hint {
   display: block;
   color: var(--text-faint);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 
 .stats {
@@ -454,12 +569,12 @@ select.field__input {
 .stats__label {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
 }
 
 .stats__value {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   text-align: right;
   overflow-wrap: anywhere;
@@ -467,19 +582,22 @@ select.field__input {
 
 /* --- Sidebar -------------------------------------------------------------- */
 
+/* Recessed rather than raised: the sidebar is navigation, and the conversation
+   is the thing being looked at. A sunken ground and a single rule are quieter
+   than a card would be. */
 .sidebar {
   display: flex;
   min-height: 0;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 10px;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-sm);
   border-right: 1px solid var(--border);
   background: var(--bg-sunken);
 }
 
 .sidebar__top {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .sidebar__new {
@@ -495,23 +613,36 @@ select.field__input {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: var(--space-2xs);
 }
 
 .sidebar__empty {
-  padding: 10px 6px;
+  padding: var(--space-md) var(--space-sm);
   color: var(--text-faint);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
+/* A session row. The active row is marked by an accent bar on the leading edge
+   as well as a tint, so the current conversation is identifiable without
+   relying on a subtle background shift alone. */
 .session {
   position: relative;
   display: flex;
   align-items: stretch;
   border: 1px solid transparent;
   border-radius: var(--radius);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.session::before {
+  position: absolute;
+  inset: 6px auto 6px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: transparent;
+  content: '';
 }
 
 .session:hover {
@@ -523,13 +654,17 @@ select.field__input {
   background: var(--accent-soft);
 }
 
+.session[data-active='true']::before {
+  background: var(--accent);
+}
+
 .session__main {
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px;
+  padding: var(--space-sm) var(--space-md);
   border: none;
   background: transparent;
   color: inherit;
@@ -540,8 +675,8 @@ select.field__input {
 
 .session__title {
   overflow: hidden;
-  font-size: 0.87rem;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -556,10 +691,10 @@ select.field__input {
 
 .session__meta {
   display: flex;
-  gap: 6px;
+  gap: var(--space-xs);
   align-items: center;
   color: var(--text-faint);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .session__pin-mark {
@@ -594,7 +729,7 @@ select.field__input {
   background: var(--bg-elevated);
   color: var(--text);
   font: inherit;
-  font-size: 0.87rem;
+  font-size: var(--text-sm);
 }
 
 /* --- Chat ----------------------------------------------------------------- */
@@ -612,58 +747,70 @@ select.field__input {
   overflow-y: auto;
 }
 
+/* The transcript column. Wide enough for a comfortable measure plus the
+   occasional wide equation, but capped so lines never run edge to edge. */
 .chat__inner {
   display: flex;
+  width: 100%;
   max-width: 860px;
   margin: 0 auto;
-  padding: 20px 24px 8px;
+  padding: var(--space-xl) var(--space-xl) var(--space-sm);
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-lg);
 }
 
 .chat__empty {
-  padding: 8px 0 20px;
+  padding: var(--space-sm) 0 var(--space-xl);
 }
 
 .chat__loading {
   color: var(--text-faint);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 /* --- Messages ------------------------------------------------------------- */
 
+/* An assistant answer is a document, not a chat bubble: no heavy border, no
+   filled card. A subtle lift and a rule is enough to separate turns, which
+   keeps a long transcript from looking like a stack of boxes. */
 .message {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-subtle);
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
+}
+
+.message[data-role='assistant'] {
   background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
 }
 
 .message[data-role='user'] {
-  background: var(--bg-subtle);
-  border-color: var(--border);
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
 }
 
 .message--live {
   border-color: var(--accent-border);
+  box-shadow: 0 0 0 1px var(--accent-soft), var(--shadow-sm);
 }
 
 .message__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-md);
 }
 
 .message__role {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .message[data-role='assistant'] .message__role {
@@ -672,18 +819,22 @@ select.field__input {
 
 .message__time {
   color: var(--text-faint);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .message__user-text {
+  max-width: var(--measure-prose);
   margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .message__status {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .message__status--muted {
@@ -710,7 +861,7 @@ select.field__input {
   display: flex;
   gap: 10px;
   color: var(--text-faint);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -731,7 +882,7 @@ select.field__input {
   align-items: baseline;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   list-style: none;
 }
 
@@ -750,7 +901,7 @@ select.field__input {
   border-radius: 999px;
   background: var(--bg-sunken);
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
@@ -761,7 +912,7 @@ select.field__input {
 .thought__preview {
   overflow: hidden;
   color: var(--text-faint);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -771,7 +922,7 @@ select.field__input {
   padding: 0 10px 10px;
   overflow-y: auto;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .thought__text {
@@ -799,7 +950,7 @@ select.field__input {
 
 .thought__failures-summary {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   cursor: pointer;
 }
 
@@ -807,7 +958,7 @@ select.field__input {
   margin: 6px 0 0;
   padding-left: 18px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .thought__failure {
@@ -816,8 +967,11 @@ select.field__input {
 
 /* --- Execution cards ------------------------------------------------------ */
 
+/* An execution card lives inside the Thought toggle, so it is deliberately
+   quiet: it is evidence, not the reading surface. Muted chrome, mono for the
+   code, and status carried by a text label as well as colour. */
 .exec-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius);
   background: var(--bg-sunken);
   overflow: hidden;
@@ -834,10 +988,10 @@ select.field__input {
 
 .exec-card__bar {
   display: flex;
-  gap: 10px;
+  gap: var(--space-md);
   align-items: center;
   justify-content: space-between;
-  padding: 5px 10px;
+  padding: var(--space-xs) var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-subtle);
 }
@@ -845,14 +999,15 @@ select.field__input {
 .exec-card__title,
 .exec-card__status {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
   align-items: center;
 }
 
 .exec-card__step {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
 }
 
 .exec-card__tool {
@@ -861,19 +1016,27 @@ select.field__input {
   background: var(--accent-soft);
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
 }
 
 .exec-card__status-label,
 .exec-card__duration {
   color: var(--text-faint);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
+/* Status is never colour alone: the label text changes too, so a red/green
+   distinction still reads without hue perception. */
 .exec-card[data-status='error'] .exec-card__status-label,
 .exec-card[data-status='timeout'] .exec-card__status-label {
   color: var(--danger);
+  font-weight: 600;
+}
+
+.exec-card[data-status='running'] .exec-card__status-label {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .exec-card__code,
@@ -881,11 +1044,11 @@ select.field__input {
 .exec-card__result,
 .exec-card__error {
   margin: 0;
-  padding: 8px 10px;
+  padding: var(--space-sm) var(--space-md);
   overflow-x: auto;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  line-height: 1.55;
   white-space: pre;
   tab-size: 4;
 }
@@ -903,7 +1066,7 @@ select.field__input {
   margin: 0;
   padding: 5px 10px 0;
   color: var(--text-faint);
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -929,7 +1092,7 @@ select.field__input {
   border-top: 1px solid var(--warn-border);
   background: var(--warn-soft);
   color: var(--warn);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
 }
 
 .exec-card__live {
@@ -937,38 +1100,44 @@ select.field__input {
   padding: 5px 10px;
   border-top: 1px solid var(--border-subtle);
   color: var(--accent);
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
 }
 
 /* --- Composer ------------------------------------------------------------- */
 
+/* The composer is the only always-there control, so it gets the strongest
+   affordance in the app: a real surface, a real border, and a focus ring that
+   is impossible to miss. */
 .composer {
-  padding: 10px 24px 16px;
+  padding: var(--space-md) var(--space-xl) var(--space-lg);
   border-top: 1px solid var(--border);
   background: var(--bg);
 }
 
 .composer__row {
   display: flex;
-  gap: 10px;
+  gap: var(--space-md);
   align-items: flex-end;
   max-width: 860px;
   margin: 0 auto;
 }
 
 .composer__input {
-  min-height: 42px;
+  min-height: 46px;
   max-height: 220px;
   flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
   background: var(--bg-elevated);
   color: var(--text);
   font: inherit;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  box-shadow: var(--shadow-sm);
   resize: none;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .composer__input::placeholder {
@@ -977,13 +1146,14 @@ select.field__input {
 
 .composer__input:focus-visible {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .composer__hint {
   max-width: 860px;
-  margin: 0 auto 6px;
+  margin: 0 auto var(--space-xs);
   color: var(--text-faint);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
 }
 
 .composer__hint + .composer__row {
@@ -998,7 +1168,7 @@ select.field__input {
 
 .onboarding__title {
   margin: 0 0 6px;
-  font-size: 1.6rem;
+  font-size: var(--text-3xl);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -1012,7 +1182,7 @@ select.field__input {
   margin: 0 0 22px;
   padding-left: 20px;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .onboarding__points li + li {
@@ -1053,9 +1223,46 @@ select.field__input {
 
 /* --- Markdown ------------------------------------------------------------- */
 
+/* The answer surface. Sized at the 16px body floor and given a real measure:
+   a solution is one column of prose and equations, and full-bleed lines make it
+   hard to track back to the next one. `overflow-wrap: anywhere` keeps a long
+   KaTeX expression from pushing the pane sideways. */
 .markdown {
+  max-width: var(--measure-prose);
   color: var(--text);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
   overflow-wrap: anywhere;
+}
+
+/* Bangla sits lower and denser than Roboto at the same size, and Kalpurush
+   has a smaller effective x-height. Answer text in Bangla therefore reads
+   slightly small unless it is nudged up, so the whole answer block gets a
+   hair more size when the content is Bangla. Set by the renderer from the
+   detected language; the default here is the Latin case. */
+.markdown:lang(bn),
+.markdown[data-lang='bn'] {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+/* Headings inside an answer. The problem this solves: a long worked solution
+   used to render as a wall, because every heading looked like body text. The
+   separation is weight and size, not a second font family — swapping the body
+   face would cost a re-bundle and a Bangla fallback retest for less gain. */
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 1.5em 0 0.55em;
+  color: var(--text);
+  font-weight: 650;
+  letter-spacing: -0.011em;
+  line-height: var(--leading-tight);
 }
 
 .markdown > :first-child {
@@ -1066,54 +1273,57 @@ select.field__input {
   margin-bottom: 0;
 }
 
-.markdown h1,
-.markdown h2,
-.markdown h3,
-.markdown h4 {
-  margin: 1.1em 0 0.5em;
-  line-height: 1.3;
-}
-
 .markdown h1 {
-  font-size: 1.3rem;
+  font-size: var(--text-2xl);
 }
 
 .markdown h2 {
-  font-size: 1.15rem;
+  font-size: var(--text-xl);
 }
 
+/* `font-weight: 650` on h3/h4 rather than a size jump: in a solution the
+   sub-steps are numerous, and growing them all competes with the equations. */
 .markdown h3 {
-  font-size: 1.02rem;
+  font-size: var(--text-lg);
 }
 
 .markdown h4 {
-  font-size: 0.94rem;
+  font-size: var(--text-md);
+  color: var(--text-muted);
 }
 
 .markdown p,
 .markdown ul,
 .markdown ol,
 .markdown blockquote {
-  margin: 0 0 0.7em;
+  margin: 0 0 0.75em;
 }
 
 .markdown ul,
 .markdown ol {
-  padding-left: 1.4em;
+  padding-left: 1.5em;
 }
 
 .markdown li + li {
-  margin-top: 0.2em;
+  margin-top: 0.3em;
+}
+
+/* Markers in the accent colour so a step list reads as structure rather than
+   as a run-on paragraph. */
+.markdown li::marker {
+  color: var(--accent);
 }
 
 .markdown blockquote {
-  padding: 2px 0 2px 12px;
-  border-left: 3px solid var(--border-strong);
+  padding: var(--space-sm) var(--space-lg);
+  border-left: 3px solid var(--accent-border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--bg-subtle);
   color: var(--text-muted);
 }
 
 .markdown hr {
-  margin: 1.2em 0;
+  margin: var(--space-xl) 0;
   border: none;
   border-top: 1px solid var(--border);
 }
@@ -1142,7 +1352,7 @@ select.field__input {
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
   color: var(--text-faint);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .md-image-blocked__note {
@@ -1157,7 +1367,7 @@ select.field__input {
 .md-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .md-table th,
@@ -1205,7 +1415,7 @@ select.field__input {
 .code-block__lang {
   color: var(--text-faint);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .code-block__pre {
@@ -1215,7 +1425,7 @@ select.field__input {
   background: var(--code-bg);
   color: var(--code-text);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   line-height: 1.55;
   white-space: pre;
   tab-size: 4;
@@ -1247,7 +1457,7 @@ select.field__input {
 
 .mermaid__label {
   color: var(--text-faint);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1262,7 +1472,7 @@ select.field__input {
   margin: 0;
   padding: 8px 11px;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .mermaid[data-state='failed'] .mermaid__status {
@@ -1288,7 +1498,7 @@ select.field__input {
   background: var(--code-bg);
   color: var(--code-text);
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1.5;
   white-space: pre;
 }
@@ -1330,21 +1540,21 @@ select.field__input {
 }
 
 .settings__heading {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
 .settings__body {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.87rem;
+  font-size: var(--text-sm);
 }
 
 .settings__loading,
 .settings__notice {
   margin: 0;
   color: var(--text-faint);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
 }
 
 .settings__notice {
@@ -1380,7 +1590,7 @@ select.field__input {
   padding: 6px 10px;
   background: var(--bg-subtle);
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1416,14 +1626,14 @@ select.field__input {
 }
 
 .model-row__name {
-  font-size: 0.87rem;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
 .model-row__id {
   color: var(--text-faint);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
 
@@ -1432,7 +1642,7 @@ select.field__input {
   flex-wrap: wrap;
   gap: 4px 10px;
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1442,7 +1652,7 @@ select.field__input {
 
 .custom-model__summary {
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -1470,7 +1680,7 @@ select.field__input {
   padding: 10px 12px;
   border: 1px solid;
   border-radius: var(--radius);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .banner--warn {
@@ -1497,7 +1707,7 @@ select.field__input {
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
 }
@@ -1509,7 +1719,7 @@ select.field__input {
 }
 
 .payload__layer {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1519,7 +1729,7 @@ select.field__input {
 .payload__note {
   margin: 0;
   color: var(--text-faint);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .payload__text {
@@ -1530,7 +1740,7 @@ select.field__input {
   background: var(--code-bg);
   color: var(--code-text);
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1544,7 +1754,7 @@ select.field__input {
 .summary-viewer__summary {
   padding: 7px 10px;
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -1552,7 +1762,7 @@ select.field__input {
   margin: 0;
   padding: 10px;
   border-top: 1px solid var(--border-subtle);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   white-space: pre-wrap;
 }
 
@@ -1578,7 +1788,7 @@ select.field__input {
   border-radius: var(--radius);
   background: var(--bg-elevated);
   box-shadow: var(--shadow-md);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .notice[data-tone='info'] {
@@ -1620,7 +1830,7 @@ select.field__input {
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
 }
@@ -1647,7 +1857,7 @@ select.field__input {
 
 .modal__title {
   margin: 0 0 8px;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
 }
 
 .modal__body {

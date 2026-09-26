@@ -168,6 +168,41 @@ const components: Components = {
   )
 }
 
+/**
+ * Bangla ranges, used only to decide whether an answer needs the Bangla type
+ * treatment. Not a language detector for content purposes — just "is there
+ * enough Bangla here to change the metrics".
+ */
+const BENGALI = /[\u0980-\u09FF]/
+
+/**
+ * True when the answer is substantially Bangla.
+ *
+ * Kalpurush has a smaller effective x-height than Roboto and sits lower on the
+ * baseline, so Bangla set at the Latin size reads small. The stylesheet scales
+ * it up and opens the leading when this is set, which needs a threshold rather
+ * than a single character: one Bangla word inside an English sentence, such as
+ * a unit or a name, should not reflow the whole answer.
+ *
+ * A small share of the characters is enough to switch, because a Bangla answer
+ * is Bangla throughout, while an English answer carries only incidental Bangla.
+ */
+export function isSubstantiallyBengali(text: string): boolean {
+  let bangla = 0
+  let letters = 0
+
+  for (const char of text) {
+    // Count letters only. Punctuation, digits and whitespace would skew the
+    // ratio, and digits are Latin by rule anyway (spec §11.1.4).
+    if (!/\p{L}/u.test(char)) continue
+    letters++
+    if (BENGALI.test(char)) bangla++
+  }
+
+  if (letters === 0) return false
+  return bangla / letters >= 0.2
+}
+
 export interface MarkdownProps {
   children: string
   className?: string
@@ -187,8 +222,15 @@ export function Markdown({ children, className }: MarkdownProps): React.JSX.Elem
   // case for prose-only turns.
   const source = useMemo(() => normaliseMathSource(children), [children])
 
+  // Recomputed as the answer streams in, and cheap: one pass, letters only.
+  const bengali = useMemo(() => isSubstantiallyBengali(source), [source])
+
   return (
-    <div className={className === undefined ? 'markdown' : `markdown ${className}`}>
+    <div
+      className={className === undefined ? 'markdown' : `markdown ${className}`}
+      lang={bengali ? 'bn' : undefined}
+      data-lang={bengali ? 'bn' : undefined}
+    >
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}

@@ -30,7 +30,7 @@ import { DatabaseSync, type SQLInputValue, type SQLOutputValue, type StatementSy
  * Bump when `SCHEMA_SQL` changes, and add the corresponding step to
  * `migrate()`. Recorded in SQLite's `user_version` header.
  */
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
 /**
  * The schema of §6 of the specification, reproduced exactly. `IF NOT EXISTS`
@@ -92,6 +92,34 @@ CREATE TABLE IF NOT EXISTS secrets (
   ciphertext  BLOB NOT NULL,
   hint        TEXT,
   updated_at  INTEGER NOT NULL
+);
+
+/**
+ * Token spend, one row per local calendar day.
+ *
+ * This exists because the obvious place for it - messages.tokens_in - is wrong.
+ * Deleting a chat cascades to its messages, so a total read off the transcript
+ * shrinks when the student tidies up, and a number that goes *down* after a
+ * delete is not a spending record. This table has no foreign key to sessions at
+ * all, which is what makes the total monotonic: the only way a figure leaves it
+ * is the app being deleted.
+ *
+ * One row per day rather than per turn because every period the page shows
+ * (today, this week, this month, this year) is a range of whole days, so each
+ * becomes a single indexed range scan. Per-turn rows would be unbounded and
+ * would buy nothing the page can display.
+ *
+ * The day column is a local YYYY-MM-DD, not a UTC date and not an epoch. A UTC
+ * key would file a 1am conversation in Asia/Dhaka under *yesterday*, which is
+ * the kind of off-by-one that makes a daily figure look wrong with no way to
+ * explain it.
+ */
+CREATE TABLE IF NOT EXISTS usage_daily (
+  day         TEXT PRIMARY KEY,
+  tokens_in   INTEGER NOT NULL DEFAULT 0,
+  tokens_out  INTEGER NOT NULL DEFAULT 0,
+  cost_usd    REAL    NOT NULL DEFAULT 0,
+  turns       INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, seq);

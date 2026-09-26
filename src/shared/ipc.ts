@@ -9,7 +9,8 @@ import type {
   SecretStatus,
   Session,
   SessionDetail,
-  Settings
+  Settings,
+  UsageReport
 } from './types'
 
 /** `invoke`/`handle` channel names. */
@@ -23,6 +24,8 @@ export const IpcChannel = {
   SecretClearApiKey: 'secret:clear-api-key',
   // Model catalog
   ModelsList: 'models:list',
+  // Usage ledger
+  UsageGet: 'usage:get',
   // Sessions
   SessionList: 'session:list',
   SessionCreate: 'session:create',
@@ -78,6 +81,14 @@ export interface IshkaponApi {
   // --- Models ---
   /** The tool-capable catalog, plus a notice if something was substituted. */
   listModels(forceRefresh?: boolean): Promise<ModelCatalogResult>
+
+  /**
+   * All-time token spend plus the today/week/month/year breakdown.
+   *
+   * Read from the usage ledger rather than from `messages`, so deleting a chat
+   * does not change the answer.
+   */
+  getUsage(): Promise<UsageReport>
 
   // --- Sessions ---
   listSessions(): Promise<Session[]>

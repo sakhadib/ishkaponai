@@ -8,7 +8,8 @@ import type {
   SecretStatus,
   Session,
   SessionDetail,
-  Settings
+  Settings,
+  UsageReport
 } from '@shared/types'
 
 /**
@@ -34,6 +35,8 @@ const api: IshkaponApi = {
 
   listModels: (forceRefresh?: boolean): Promise<ModelCatalogResult> =>
     ipcRenderer.invoke(IpcChannel.ModelsList, forceRefresh === true),
+
+  getUsage: (): Promise<UsageReport> => ipcRenderer.invoke(IpcChannel.UsageGet),
 
   listSessions: (): Promise<Session[]> => ipcRenderer.invoke(IpcChannel.SessionList),
   createSession: (options?: CreateSessionOptions): Promise<Session> =>

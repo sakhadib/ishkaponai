@@ -25,6 +25,7 @@ import { ModelSection } from '@/features/settings/sections/ModelSection'
 import { PersonaliseSection } from '@/features/settings/sections/PersonaliseSection'
 import { AnswersSection } from '@/features/settings/sections/AnswersSection'
 import { CalculationSection } from '@/features/settings/sections/CalculationSection'
+import { UsageSection } from '@/features/settings/sections/UsageSection'
 import { PromptSection } from '@/features/settings/sections/PromptSection'
 import { useSettingsStore } from '@/store/settingsStore'
 
@@ -34,6 +35,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'personalise', label: 'Personalise', icon: 'user', blurb: 'Level and subjects' },
   { id: 'answers', label: 'Answers', icon: 'text', blurb: 'Language and instructions' },
   { id: 'calculation', label: 'Calculation', icon: 'calculator', blurb: 'Limits and timeouts' },
+  { id: 'usage', label: 'Usage', icon: 'chart', blurb: 'Tokens spent so far' },
   { id: 'prompt', label: 'Prompt', icon: 'eye', blurb: 'Exactly what is sent' }
 ] as const satisfies ReadonlyArray<{ id: string; label: string; icon: IconName; blurb: string }>
 
@@ -45,6 +47,7 @@ const SECTION_COMPONENTS: Record<SettingsSectionId, () => React.JSX.Element> = {
   personalise: PersonaliseSection,
   answers: AnswersSection,
   calculation: CalculationSection,
+  usage: UsageSection,
   prompt: PromptSection
 }
 

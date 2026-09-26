@@ -32,7 +32,8 @@ export const ICON_NAMES = [
   'user',
   'text',
   'calculator',
-  'eye'
+  'eye',
+  'chart'
 ] as const
 
 export type IconName = (typeof ICON_NAMES)[number]
@@ -182,6 +183,16 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
       <circle cx="12" cy="12" r="2.75" />
+    </>
+  ),
+
+  // Chart: three rising columns on a baseline, for the usage ledger. Drawn as
+  // separate bars rather than a continuous area so it reads as "counted up over
+  // time" at 16px, and stays stroke-only like the rest of the set.
+  chart: (
+    <>
+      <line x1="3.5" y1="20.5" x2="20.5" y2="20.5" />
+      <path d="M6.5 20.5v-5M12 20.5V7M17.5 20.5v-9" />
     </>
   )
 }

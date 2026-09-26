@@ -10,7 +10,7 @@
  */
 import { create } from 'zustand'
 import { DEFAULT_SETTINGS } from '@shared/types'
-import type { ModelInfo, SecretStatus, Settings } from '@shared/types'
+import type { ModelInfo, SecretStatus, Settings, UsageReport } from '@shared/types'
 import { call, callQuiet } from '@/lib/bridge'
 
 export interface SettingsState {
@@ -22,11 +22,15 @@ export interface SettingsState {
   modelsLoading: boolean
   /** Non-null when models came from the bundled fallback list. */
   modelsNotice: string | null
+  /** The token ledger. Null until first load, and after a failed load. */
+  usage: UsageReport | null
+  usageLoading: boolean
   error: string | null
 
   load: () => Promise<void>
   loadSecret: () => Promise<void>
   loadModels: (forceRefresh?: boolean) => Promise<void>
+  loadUsage: () => Promise<void>
   update: (patch: Partial<Settings>) => Promise<void>
   setApiKey: (key: string) => Promise<{ ok: boolean; error?: string }>
   clearApiKey: () => Promise<void>
@@ -44,6 +48,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   models: [],
   modelsLoading: false,
   modelsNotice: null,
+  usage: null,
+  usageLoading: false,
   error: null,
 
   load: async () => {
@@ -83,8 +89,30 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   },
 
-  update: async (patch) => {
-    // Apply optimistically so toggles feel instant, then reconcile with what
+  /**
+   * Reads the token ledger.
+   *
+   * Quiet on failure, unlike the other loaders: usage is a readout, and a
+   * banner shouting about a failed *read* would be alarming in proportion to
+   * nothing. `usage` simply stays null and the pane says it has nothing to show.
+   */
+  loadUsage: async () => {
+    if (get().usageLoading) return
+    set({ usageLoading: true })
+    try {
+      const usage = await callQuiet<UsageReport | null>(
+        'Reading token usage',
+        (api) => api.getUsage(),
+        null,
+        () => set({ usage: null })
+      )
+      set({ usage, usageLoading: false })
+    } catch {
+      set({ usageLoading: false })
+    }
+  },
+
+  update: async (patch) => {    // Apply optimistically so toggles feel instant, then reconcile with what
     // main actually stored (it clamps and normalises).
     const previous = get().settings
     set({ settings: { ...previous, ...patch } })

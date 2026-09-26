@@ -30,6 +30,7 @@ import {
   touchSession,
   updateSession
 } from './sessions'
+import { isWorthRecording, localDay, recordUsage } from './usage'
 import type { AgentEvent } from '@shared/types'
 
 const FLUSH_INTERVAL_MS = 250
@@ -283,6 +284,27 @@ export class TurnRecorder {
       touchSession(this.db, event.sessionId)
     } catch (error) {
       console.error('[turn-recorder] failed to complete the assistant message:', error)
+    }
+
+    // The ledger, deliberately outside the try above. A total that fails to
+    // update is a cosmetic gap; a thrown error here would leave the assistant
+    // message stuck in 'streaming' with no path back, which is far worse than a
+    // missing increment.
+    this.recordSpend(event.usage)
+  }
+
+  /**
+   * Adds a finished turn to the day it happened.
+   *
+   * Written here rather than read off `messages` later, because `messages` is
+   * deleted along with its chat. See `usage.ts` for why that matters.
+   */
+  private recordSpend(usage: Extract<AgentEvent, { type: 'turn.finished' }>['usage']): void {
+    if (!isWorthRecording(usage)) return
+    try {
+      recordUsage(this.db, localDay(new Date()), usage)
+    } catch (error) {
+      console.error('[turn-recorder] failed to record usage for the day:', error)
     }
   }
 

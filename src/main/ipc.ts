@@ -27,6 +27,7 @@ import type { SecretStore } from './secrets'
 import type { SettingsStore } from './settings'
 import { parseSettingsPatch } from './settings'
 import { listModels } from './openrouter'
+import { readUsage } from './usage'
 import {
   appendMessage,
   autoTitleSession,
@@ -293,6 +294,18 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
     guard('models:list', async (event, forceRefresh: unknown) => {
       assertTrustedSender(event, getWindow())
       return listModels(forceRefresh === true)
+    })
+  )
+
+  // --- Usage ---------------------------------------------------------------
+
+  ipcMain.handle(
+    IpcChannel.UsageGet,
+    guard('usage:get', async (event) => {
+      assertTrustedSender(event, getWindow())
+      // Read in the process that owns the clock, because the period boundaries
+      // are local-midnight and this is the only place that knows the timezone.
+      return readUsage(db)
     })
   )
 

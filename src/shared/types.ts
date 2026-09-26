@@ -242,6 +242,38 @@ export interface TurnUsage {
   costUsd: number | null
 }
 
+// ---------------------------------------------------------------------------
+// Usage ledger
+// ---------------------------------------------------------------------------
+
+export interface UsageTotals {
+  tokensIn: number
+  tokensOut: number
+  /** Sum of what OpenRouter reported. 0 when it reported nothing. */
+  costUsd: number
+  /** Completed turns. Excludes cancelled ones, which report no usage. */
+  turns: number
+}
+
+export type UsagePeriodKey = 'today' | 'week' | 'month' | 'year'
+
+export interface UsagePeriod {
+  readonly key: UsagePeriodKey
+  readonly label: string
+  /** Inclusive local `YYYY-MM-DD` the period starts on. */
+  readonly from: string
+  readonly totals: UsageTotals
+}
+
+export interface UsageReport {
+  /** All time. Unaffected by deleting a chat — that is the point of the ledger. */
+  readonly total: UsageTotals
+  readonly periods: readonly UsagePeriod[]
+  /** Oldest and newest day with a row, or null when nothing has been recorded. */
+  readonly firstDay: string | null
+  readonly lastDay: string | null
+}
+
 /**
  * Every event is a discriminated union member so the renderer can switch
  * exhaustively. New members must be added to `AgentEvent` and handled in the

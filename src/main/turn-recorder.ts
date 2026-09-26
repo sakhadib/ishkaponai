@@ -27,7 +27,8 @@ import {
   finalizeMessage,
   finishToolCall,
   setSessionSummary,
-  touchSession
+  touchSession,
+  updateSession
 } from './sessions'
 import type { AgentEvent } from '@shared/types'
 
@@ -87,6 +88,12 @@ export class TurnRecorder {
         this.recordCompaction(event)
         return
 
+      case 'title.suggested':
+        // A title is not turn state and has no buffer, but it must not be
+        // silently dropped by this exhaustive switch.
+        this.recordTitle(event)
+        return
+
       case 'turn.finished':
         this.finishTurn(event)
         return
@@ -102,6 +109,19 @@ export class TurnRecorder {
         // finishes.
         return
     }
+  }
+
+  /**
+   * Stores a model-generated session title.
+   *
+   * Flushed first so the title cannot be written before the buffered deltas it
+   * shares a `updated_at` timestamp with, and applied immediately rather than
+   * batched: a title arriving a second late should appear in the sidebar at
+   * once, and it is a single-row write.
+   */
+  private recordTitle(event: Extract<AgentEvent, { type: 'title.suggested' }>): void {
+    this.flush()
+    updateSession(this.db, event.sessionId, { title: event.title })
   }
 
   /**

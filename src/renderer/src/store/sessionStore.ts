@@ -21,6 +21,10 @@ export interface SessionState {
   error: string | null
 
   loadSessions: () => Promise<void>
+  /**
+   * Replace a session's title in place, from a `title.suggested` event.
+   */
+  applyGeneratedTitle: (id: string, title: string) => void
   selectSession: (id: string | null) => Promise<void>
   newSession: () => Promise<void>
   renameSession: (id: string, title: string) => Promise<void>
@@ -69,6 +73,33 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       (error) => set({ error: describeError(error) })
     )
     set({ sessions: sortSessions(sessions) })
+  },
+
+  /**
+   * Applies a model-generated title to the in-memory list.
+   *
+   * The title arrives over the event stream a moment after the first message, so
+   * the sidebar updates in place rather than re-reading the whole list. Left
+   * deliberately unawaited: the write already happened in main, and a failure
+   * here would be cosmetic.
+   */
+  applyGeneratedTitle: (id, title) => {
+    const trimmed = title.trim()
+    if (trimmed === '') return
+
+    set((state) => ({
+      sessions: sortSessions(
+        state.sessions.map((session) =>
+          session.id === id ? { ...session, title: trimmed } : session
+        )
+      )
+    }))
+
+    // Keep the open conversation's header in step with the sidebar.
+    const detail = get().detail
+    if (detail !== null && detail.session.id === id) {
+      set({ detail: { ...detail, session: { ...detail.session, title: trimmed } } })
+    }
   },
 
   selectSession: async (id) => {

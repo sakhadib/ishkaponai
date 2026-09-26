@@ -94,6 +94,16 @@ function normaliseField(key: string, value: unknown): Settings[keyof Settings] {
       if (typeof value !== 'boolean') throw new Error('showThinking must be a boolean.')
       return value
     }
+    case 'titleModelId': {
+      // `null` means "use the cheap default", so null is a valid value here
+      // rather than something to reject.
+      if (value === null) return null
+      if (typeof value !== 'string') throw new Error('titleModelId must be a string or null.')
+      const trimmed = value.trim()
+      if (trimmed === '') return null
+      if (trimmed.length > 200) throw new Error('titleModelId is too long.')
+      return trimmed
+    }
     default:
       // Unreachable via `Settings`, but the switch is the guard for keys the
       // renderer invented.

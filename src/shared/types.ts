@@ -105,6 +105,12 @@ export interface Settings {
   pythonTimeoutMs: number
   showThinking: boolean
   maxOutputTokens: number
+  /**
+   * Cheap model used for background chores — session titles and context
+   * compaction — so those never run on the model the student picked for quality.
+   * `null` falls back to that model.
+   */
+  titleModelId: string | null
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -114,7 +120,8 @@ export const DEFAULT_SETTINGS: Settings = {
   userInstructions: '',
   pythonTimeoutMs: 60_000,
   showThinking: true,
-  maxOutputTokens: 2048
+  maxOutputTokens: 2048,
+  titleModelId: null
 }
 
 /**
@@ -195,6 +202,7 @@ export type AgentEvent =
     }
   | { type: 'compaction.started'; sessionId: string }
   | { type: 'compaction.finished'; sessionId: string; summary: string }
+  | { type: 'title.suggested'; sessionId: string; title: string }
   | { type: 'turn.finished'; sessionId: string; messageId: string; usage: TurnUsage }
   | {
       type: 'turn.error'

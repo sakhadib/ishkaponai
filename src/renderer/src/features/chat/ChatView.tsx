@@ -10,6 +10,7 @@
  *     is refreshed.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { onAgentEvent } from '@/lib/bridge'
 import type { Message, ToolCall } from '@shared/types'
 import { Composer } from '@/features/chat/Composer'
 import {
@@ -230,6 +231,18 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
       .filter((card) => isFailedStatus(card.status))
       .map((card) => describeFailure(card.toolCallId, card.error, card.status))
   }, [streamingHere, liveOrdered])
+
+  // A generated title belongs to the session, not the turn, so it is applied
+  // straight to the session store rather than buffered here.
+  const applyGeneratedTitle = useSessionStore((state) => state.applyGeneratedTitle)
+  useEffect(() => {
+    if (activeId === null) return
+    return onAgentEvent((event) => {
+      if (event.type === 'title.suggested' && event.sessionId === activeId) {
+        applyGeneratedTitle(event.sessionId, event.title)
+      }
+    })
+  }, [activeId, applyGeneratedTitle, onAgentEvent])
 
   return (
     <div className="chat">

@@ -380,6 +380,12 @@ export const useTurnStore = create<TurnState>((set, get) => {
         return
       }
 
+      case 'title.suggested': {
+        // Not turn state. The session store owns titles and updates the sidebar;
+        // acknowledging it here keeps this switch exhaustive.
+        return
+      }
+
       default: {
         // Exhaustiveness guard: adding a member to `AgentEvent` breaks the build
         // here rather than silently dropping the event.

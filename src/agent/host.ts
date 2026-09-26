@@ -50,6 +50,7 @@ import {
 } from './context'
 import { createResolver, contextLengthFor, DEFAULT_COMPACTION_MODEL } from './provider'
 import type { ChatModelFactory } from './provider'
+import { DEFAULT_TITLE_MODEL, generateSessionTitle } from './title'
 import { PRELOAD_PACKAGES } from './wheels'
 import { generateText } from 'ai'
 
@@ -208,9 +209,11 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
         return
       case 'settings':
         this.settings = command.settings
+        this.titleModelId = command.settings.titleModelId
         this.log(
           `settings updated: model=${this.settings.modelId ?? '(none)'} ` +
-            `timeout=${this.settings.pythonTimeoutMs}ms maxTokens=${this.settings.maxOutputTokens}`
+            `timeout=${this.settings.pythonTimeoutMs}ms maxTokens=${this.settings.maxOutputTokens} ` +
+            `titleModel=${this.titleModelId ?? '(default)'}`
         )
         return
       case 'reset-interpreter':
@@ -303,6 +306,9 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
       return
     }
 
+    // Name the session before the turn starts, but do not await it.
+    this.maybeTitleSession(command)
+
     const turn: ActiveTurn = {
       sessionId,
       messageId,
@@ -333,6 +339,52 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
     if (this.providedChatFactory !== undefined) return this.providedChatFactory
     return this.chatFactory
   }
+
+  /**
+   * Names the session, once, on its first message.
+   *
+   * Fire-and-forget by design: the student is waiting for an answer, and a title
+   * arriving a moment later is fine. Failure is silent because a missing title
+   * is cosmetic — main has already written the truncated-first-message fallback.
+   */
+  private maybeTitleSession(command: Extract<AgentCommand, { kind: 'send' }>): void {
+    // Only the first message. A conversation is not re-titled on every turn.
+    if (command.history.length > 0) return
+
+    const factory = this.resolveChatFactory()
+    if (factory === null) return
+
+    // Already titled: either a previous attempt succeeded, or the user renamed
+    // the session. Re-asking would overwrite their choice.
+    if (this.titledSessions.has(command.sessionId)) return
+
+    const modelId = this.titleModelId ?? this.compactionModelOverride ?? DEFAULT_TITLE_MODEL
+
+    this.titledSessions.add(command.sessionId)
+
+    void generateSessionTitle({
+      model: factory(modelId),
+      question: command.text,
+      preferredLanguage: command.preferredLanguage
+    })
+      .then((title) => {
+        if (title === null) {
+          this.log('title generation produced nothing; keeping the fallback title')
+          return
+        }
+        this.post({ type: 'title.suggested', sessionId: command.sessionId, title })
+      })
+      .catch((error: unknown) => {
+        const name = error instanceof Error ? error.name : typeof error
+        this.log(`title generation failed: ${name}`)
+      })
+  }
+
+  /** Sessions that have been through title generation, so it happens once. */
+  private readonly titledSessions = new Set<string>()
+
+  /** Set from settings; `null` means "use the cheap background model". */
+  private titleModelId: string | null = null
 
   // -------------------------------------------------------------------------
   // The turn

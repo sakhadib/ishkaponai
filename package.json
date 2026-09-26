@@ -1,10 +1,18 @@
 {
   "name": "ishkapon-ai",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "ISHKAPON AI desktop application",
   "author": "ISHKAPON",
   "license": "MIT",
+  "homepage": "https://sakhadib.github.io/ishkaponai/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sakhadib/ishkaponai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sakhadib/ishkaponai/issues"
+  },
   "main": "./out/bootstrap.cjs",
   "type": "module",
   "engines": {

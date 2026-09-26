@@ -1,13 +1,13 @@
 # Terms of Use
 
-**ISHKAPON AI** — version 0.1.0
+**ISHKAPON AI** — version 1.0.0
 
 These terms cover your use of the ISHKAPON AI desktop application. The application
 is open-source software released under the [MIT License](LICENSE); this document
 adds the rules of use and, importantly, an honest statement of what the software
 cannot promise you.
 
-Last updated: 26 September 2026
+Last updated: 27 September 2026
 
 ---
 

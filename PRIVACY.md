@@ -1,13 +1,13 @@
 # Privacy Policy
 
-**ISHKAPON AI** — version 0.1.0
+**ISHKAPON AI** — version 1.0.0
 
 This policy describes what the software actually does. Every claim below was read
 out of the source rather than assumed, and the file each claim comes from is named
 so you can check it. Where the honest answer is a limitation, it is stated as a
 limitation rather than smoothed over.
 
-Last updated: 26 September 2026
+Last updated: 27 September 2026
 
 ---
 

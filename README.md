@@ -79,13 +79,32 @@ macOS runner), and **deb/rpm** require the respective Linux tooling. The Windows
 MSI builds natively on Windows and needs no extra tooling — `electron-builder`
 fetches WiX itself on first run.
 
+### Linux targets are harder to cross-build than they look
+
+`npm run build:linux` configures AppImage, deb and rpm, but on a Windows machine
+only some of them can actually be produced. Both failures below were hit on
+Node 24 / electron-builder 26 rather than inferred:
+
+| Target | On Windows | Why |
+| ------ | ---------- | --- |
+| **AppImage** | needs Developer Mode | The AppImage target creates symlinks in its staging directory. Windows refuses with `EPERM: operation not permitted, symlink` unless Developer Mode is on or the shell is elevated. |
+| **deb**, **rpm** | needs `fpm` | Both go through `fpm`, a Ruby gem. It is not bundled for Windows, so the build dies with `ENOENT: spawn fpm`. Install Ruby and `gem install fpm`, or build on Linux. |
+
+Also note `deb` and `rpm` **require a `homepage`** in `package.json`. Debian and RPM
+control files carry a `Homepage:` field, and the build fails with *"Please specify
+project homepage"* before it packages anything if one is absent.
+
+The practical route for all three at once is a Linux machine or a CI runner — which
+is what the release workflow exists for. On Windows alone, `npm run build:win` is
+the only target that needs no extra setup.
+
 ## Windows installation
 
 `npm run build:win` writes two files to `release/`:
 
 ```
-ISHKAPON AI-0.1.0-x64-setup.msi      ~143 MB
-ISHKAPON AI-0.1.0-arm64-setup.msi    ~138 MB
+ISHKAPON AI-1.0.0-x64-setup.msi      ~143 MB
+ISHKAPON AI-1.0.0-arm64-setup.msi    ~138 MB
 ```
 
 A student double-clicks the one matching their machine and gets:

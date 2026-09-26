@@ -473,6 +473,11 @@ a:hover {
 
 .field__input {
   width: 100%;
+  /* `Field` is a shared component and this is the last thing between a control
+     and a flex column that can squash it — see `.settings__panel > *` for the
+     same reasoning at the pane level. An input's height is content-driven, so
+     it loses a compression race that a label's line box would win. */
+  flex: none;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -720,6 +725,14 @@ select.field__input {
   flex-direction: column;
   overflow-y: auto;
   padding: 0 var(--space-sm);
+}
+
+/* Same rule as `.settings__panel > *`, and for the same reason: this is a
+   scrolling column, so its sections size to their content and the rail scrolls.
+   Without it a student with enough sessions for the list to overflow finds their
+   rows quietly compressed instead of scrolled. */
+.sidebar__scroll > * {
+  flex: none;
 }
 
 .sidebar__section {
@@ -2228,6 +2241,13 @@ select.field__input {
   list-style: none;
 }
 
+/* Scrolling column: items size to content. See `.settings__panel > *`. Six
+   sections fit the dialog today, so this is not yet load-bearing — but adding a
+   seventh is exactly the change that would quietly squash the last one. */
+.settings__nav-list > * {
+  flex: none;
+}
+
 .settings__nav-item {
   display: flex;
   width: 100%;
@@ -2295,6 +2315,24 @@ select.field__input {
   flex-direction: column;
   padding: var(--space-xl);
   overflow-y: auto;
+}
+
+/* The panel is the scroll container, so its children must size to their content
+   instead of being compressed to fit.
+
+   This is not defensive. The panel is a grid item in `.modal--wide`, so it has a
+   *definite* height (`min(620px, 86vh)`), and it sets `overflow-y: auto` — which
+   turns off the automatic minimum size its children would otherwise get. Every
+   descendant is therefore a flex item on the vertical main axis with nothing
+   stopping it from shrinking below its content.
+
+   The visible symptom: an `<input>` has a content-driven height, so it is the
+   first thing to be squeezed, and a pane taller than the dialog — Personalise,
+   with three inputs, three subject cards and a note — flattened the inputs to a
+   sliver while their labels and hints stayed put, because a line box resists
+   compression and an input does not. */
+.settings__panel > * {
+  flex: none;
 }
 
 .settings__pane {

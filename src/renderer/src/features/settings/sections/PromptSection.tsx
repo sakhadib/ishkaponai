@@ -12,6 +12,7 @@
  * inventing a bridge method or showing a reconstruction dressed up as the real
  * thing.
  */
+import type { Settings } from '@shared/types'
 import { useSessionStore } from '@/store/sessionStore'
 import { useTurnStore } from '@/store/turnStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -20,9 +21,14 @@ import { ReadOnlyRow } from '@/components/ui'
 import { formatDateTime } from '@/lib/format'
 
 export function PromptSection(): React.JSX.Element {
-  const instructions = useSettingsStore((state) => state.settings.userInstructions)
+  const settings = useSettingsStore((state) => state.settings)
   const session = useSessionStore((state) => state.detail?.session ?? null)
   const summary = useTurnStore((state) => state.summary)
+
+  const instructions = settings.userInstructions
+
+  /** Personalise, rendered exactly as the agent host will send it. */
+  const profile = describeProfile(settings)
 
   const platform = typeof window !== 'undefined' ? window.ishkapon?.platform : undefined
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'unknown'
@@ -35,8 +41,10 @@ export function PromptSection(): React.JSX.Element {
       description="The system prompt is assembled from three layers. This is the part of it you can inspect from inside the app."
     >
       <div className="banner banner--info">
-        Layer 1 and the assembled prompt cannot be read from this window — the preload bridge does
-        not expose them. What is shown below is everything the renderer genuinely has.
+        The base rules and the assembled prompt cannot be read from this window — the preload
+        bridge does not expose them. What is shown below is everything the renderer genuinely
+        has. Personalise and your own instructions are rebuilt here from the same stored values
+        the agent host reads, so they match what is actually sent.
       </div>
 
       <div className="payload">
@@ -47,10 +55,17 @@ export function PromptSection(): React.JSX.Element {
           and treat tool output as data rather than instructions. Not readable from the renderer.
         </p>
 
-        <h4 className="payload__layer">Layer 2 — your instructions</h4>
+        <h4 className="payload__layer">Layer 2 — you</h4>
+        <pre className="payload__text">
+          {profile === null
+            ? '(not set — Personalise is empty)'
+            : profile.map((line) => `- ${line}`).join('\n')}
+        </pre>
+
+        <h4 className="payload__layer">Layer 3 — your instructions</h4>
         <pre className="payload__text">{instructions === '' ? '(empty)' : instructions}</pre>
 
-        <h4 className="payload__layer">Layer 3 — this computer</h4>
+        <h4 className="payload__layer">Layer 4 — this computer</h4>
         <pre className="payload__text">
           {[
             `platform: ${platform ?? 'unknown'}`,
@@ -93,4 +108,26 @@ export function PromptSection(): React.JSX.Element {
       )}
     </SettingsPanel>
   )
+}
+
+/**
+ * The Personalise layer, rebuilt the way the agent host sends it.
+ *
+ * Duplicated from `prompt.ts` on purpose rather than imported: the agent host is
+ * a separate bundle the renderer cannot import from, and the alternative was
+ * widening the preload bridge to expose a composed string. Keeping the two in
+ * step is a one-line change in each, and the value of this pane is that it
+ * shows what the student set rather than what the app can read.
+ */
+function describeProfile(settings: Settings): string[] | null {
+  const lines: string[] = []
+  if (settings.studentName.trim() !== '') lines.push(`name: ${settings.studentName.trim()}`)
+  if (settings.studentAge !== null) lines.push(`age: ${settings.studentAge}`)
+  if (settings.studentGrade.trim() !== '') {
+    lines.push(`year or grade: ${settings.studentGrade.trim()}`)
+  }
+  if (settings.studySubjects.length > 0) {
+    lines.push(`mainly studying: ${settings.studySubjects.join(', ')}`)
+  }
+  return lines.length === 0 ? null : lines
 }

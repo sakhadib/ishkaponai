@@ -29,6 +29,7 @@ export const ICON_NAMES = [
   // Settings navigation.
   'key',
   'sparkle',
+  'user',
   'text',
   'calculator',
   'sun',
@@ -148,6 +149,14 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6L10 3z" />
       <path d="M17.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" />
+    </>
+  ),
+
+  // User: head and shoulders, for Personalise.
+  user: (
+    <>
+      <circle cx="12" cy="8" r="3.75" />
+      <path d="M4.75 20.5a7.25 7.25 0 0114.5 0" />
     </>
   ),
 

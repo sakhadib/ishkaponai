@@ -14,8 +14,8 @@
 import type { Database } from './db'
 import { readOptionalString } from './row-values'
 import { isLanguagePref } from './sessions'
-import { DEFAULT_SETTINGS } from '@shared/types'
-import type { Settings, ThemeMode } from '@shared/types'
+import { DEFAULT_SETTINGS, STUDY_SUBJECTS } from '@shared/types'
+import type { Settings, StudySubject, ThemeMode } from '@shared/types'
 
 const SETTINGS_KEY = 'app'
 
@@ -27,8 +27,27 @@ export const LIMITS = {
   pythonTimeoutMs: { min: 1_000, max: 300_000 },
   maxOutputTokens: { min: 256, max: 32_768 },
   /** Layer 2 of the system prompt is user text; keep it bounded. */
-  userInstructionsMaxLength: 8_000
+  userInstructionsMaxLength: 8_000,
+  /**
+   * Personalise is injected into the system prompt on every single turn, so it
+   * is the one place where unbounded user text is a per-request cost rather than
+   * a one-off. Kept short enough that a student cannot paste a novel into it.
+   */
+  studentNameMaxLength: 60,
+  studentGradeMaxLength: 60
 } as const
+
+/**
+ * Trims a free-text field and enforces its length cap.
+ *
+ * A newlines-and-runs-of-spaces collapse matters here more than usual: these
+ * values are interpolated into a prompt as list items, so a stray newline would
+ * let a student inject a fake bullet into their own profile.
+ */
+function collapse(value: string, max = 200): string {
+  const flat = value.replace(/\s+/gu, ' ').trim()
+  return flat.length > max ? flat.slice(0, max) : flat
+}
 
 const THEME_MODES: readonly ThemeMode[] = ['light', 'dark', 'system']
 
@@ -93,6 +112,40 @@ function normaliseField(key: string, value: unknown): Settings[keyof Settings] {
     case 'showThinking': {
       if (typeof value !== 'boolean') throw new Error('showThinking must be a boolean.')
       return value
+    }
+    case 'studentName': {
+      if (typeof value !== 'string') throw new Error('studentName must be a string.')
+      return collapse(value, LIMITS.studentNameMaxLength)
+    }
+    case 'studentGrade': {
+      if (typeof value !== 'string') throw new Error('studentGrade must be a string.')
+      return collapse(value, LIMITS.studentGradeMaxLength)
+    }
+    case 'studentAge': {
+      // `null` means "not given", which is a real answer and must survive the
+      // round trip. A cleared field sends an empty string from the input, and
+      // that is normalised to null here so the stored value is unambiguous.
+      if (value === null || value === '') return null
+      const parsed = typeof value === 'number' ? value : Number(String(value).trim())
+      if (!Number.isFinite(parsed)) throw new Error('studentAge must be a number.')
+      // 5 to 120: below 5 is not a school student, and above 120 is a typo.
+      // Clamped rather than rejected so an over-typed value still saves.
+      return Math.round(Math.min(Math.max(parsed, 5), 120))
+    }
+    case 'studySubjects': {
+      if (!Array.isArray(value)) throw new Error('studySubjects must be an array.')
+      const allowed = new Set<string>(STUDY_SUBJECTS)
+      const out: StudySubject[] = []
+      for (const entry of value) {
+        if (typeof entry !== 'string' || !allowed.has(entry)) {
+          throw new Error(`Unknown subject: ${String(entry)}`)
+        }
+        // De-duplicate rather than trusting the renderer to have done it.
+        if (!out.includes(entry as StudySubject)) out.push(entry as StudySubject)
+      }
+      // Canonical order, so the prompt is byte-identical regardless of the
+      // order the student ticked the boxes in.
+      return STUDY_SUBJECTS.filter((subject) => out.includes(subject))
     }
     case 'titleModelId':
       // Removed from the contract, but a settings row written before the

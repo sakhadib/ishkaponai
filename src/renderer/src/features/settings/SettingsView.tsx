@@ -22,6 +22,7 @@ import type { IconName } from '@/components/Icon'
 import { Icon } from '@/components/Icon'
 import { AccountSection } from '@/features/settings/sections/AccountSection'
 import { ModelSection } from '@/features/settings/sections/ModelSection'
+import { PersonaliseSection } from '@/features/settings/sections/PersonaliseSection'
 import { AppearanceSection } from '@/features/settings/sections/AppearanceSection'
 import { AnswersSection } from '@/features/settings/sections/AnswersSection'
 import { CalculationSection } from '@/features/settings/sections/CalculationSection'
@@ -31,6 +32,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 export const SETTINGS_SECTIONS = [
   { id: 'account', label: 'Account', icon: 'key', blurb: 'Your OpenRouter API key' },
   { id: 'model', label: 'Model', icon: 'sparkle', blurb: 'Which model answers' },
+  { id: 'personalise', label: 'Personalise', icon: 'user', blurb: 'Level and subjects' },
   { id: 'answers', label: 'Answers', icon: 'text', blurb: 'Language and instructions' },
   { id: 'calculation', label: 'Calculation', icon: 'calculator', blurb: 'Limits and timeouts' },
   { id: 'appearance', label: 'Appearance', icon: 'sun', blurb: 'Theme and detail' },
@@ -42,6 +44,7 @@ export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]['id']
 const SECTION_COMPONENTS: Record<SettingsSectionId, () => React.JSX.Element> = {
   account: AccountSection,
   model: ModelSection,
+  personalise: PersonaliseSection,
   answers: AnswersSection,
   calculation: CalculationSection,
   appearance: AppearanceSection,

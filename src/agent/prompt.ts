@@ -96,9 +96,31 @@ export interface EnvironmentFacts {
   readonly sandboxError: string | null
 }
 
+/**
+ * What the student told us about themselves in Personalise.
+ *
+ * A partial record on purpose: every field is optional, because a student who
+ * has filled in nothing must still get a working app, and a model given "age
+ * unknown" handles it better than one given a wrong age.
+ */
+export interface StudentProfile {
+  readonly name: string
+  /** Age in years, or `null` when not given. */
+  readonly age: number | null
+  /**
+   * Free text rather than an enum: what a student calls their year depends on
+   * their curriculum ("Class 10", "Year 11", "O-Level", "HSC"), and
+   * enumerating it would quietly exclude most of the world.
+   */
+  readonly grade: string
+  readonly subjects: readonly string[]
+}
+
 export interface PromptInput {
   readonly userInstructions: string
   readonly preferredLanguage: LanguagePref
+  /** Personalise. Omitted or empty contributes no layer. */
+  readonly student?: StudentProfile
   readonly environment: EnvironmentFacts
   /**
    * Present when §10.1 leaves under 4096 tokens of history budget. The model
@@ -115,22 +137,68 @@ export interface PromptInput {
  * "view exact payload" inspector and the request share one code path.
  */
 export function composeSystemPrompt(input: PromptInput): string {
-  const sections: string[] = [BASE_AGENT_PROMPT, layerTwo(input), layerThree(input)]
+  const sections: string[] = [
+    BASE_AGENT_PROMPT,
+    layerPersonalise(input),
+    layerTwo(input),
+    layerThree(input)
+  ]
   return sections.filter((section) => section.length > 0).join('\n\n')
 }
 
 /** Same composition, but as discrete layers, for the Settings inspector. */
 export function composeSystemPromptLayers(input: PromptInput): {
   readonly base: string
+  readonly personalise: string | null
   readonly user: string | null
   readonly runtime: string
   readonly full: string
 } {
   const base = BASE_AGENT_PROMPT
+  const personalise = layerPersonalise(input)
   const user = layerTwo(input)
   const runtime = layerThree(input)
-  const full = [base, user, runtime].filter((s) => s.length > 0).join('\n\n')
-  return { base, user, runtime, full }
+  const full = [base, personalise, user, runtime].filter((s) => s.length > 0).join('\n\n')
+  return { base, personalise, user, runtime, full }
+}
+
+/**
+ * Personalise layer.
+ *
+ * Sits directly after the base prompt and *before* the student's own free-text
+ * instructions, so the two never fight: the profile is a fixed shape the model
+ * reads first, and anything the student typed later is a preference layered on
+ * top of it.
+ *
+ * Omitted entirely when empty, so a student who has told us nothing gets a
+ * prompt with no empty headings in it.
+ */
+function layerPersonalise(input: PromptInput): string {
+  const profile = input.student
+  if (profile === undefined) return ''
+
+  const name = profile.name.trim()
+  const grade = profile.grade.trim()
+  const subjects = profile.subjects.map((s) => s.trim()).filter((s) => s !== '')
+  const age = profile.age
+
+  if (name === '' && grade === '' && age === null && subjects.length === 0) return ''
+
+  const lines: string[] = ['## The student', '']
+
+  const facts: string[] = []
+  if (name !== '') facts.push(`name: ${name}`)
+  if (age !== null) facts.push(`age: ${age}`)
+  if (grade !== '') facts.push(`year or grade: ${grade}`)
+  if (subjects.length > 0) facts.push(`mainly studying: ${subjects.join(', ')}`)
+
+  lines.push(...facts.map((fact) => `- ${fact}`))
+  lines.push('')
+  lines.push(
+    'Use this to pitch at the right level: keep the method appropriate to their year, define any term they would not yet know, and stay inside the syllabus they are studying. Do not mention these details back to them, and do not open an answer by greeting them by name — it reads as a scripted reply. If a question falls outside their subjects, still answer it, but do not assume they know the surrounding context.'
+  )
+
+  return lines.join('\n')
 }
 
 function layerTwo(input: PromptInput): string {

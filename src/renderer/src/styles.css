@@ -2017,6 +2017,77 @@ select.field__input {
   justify-content: flex-end;
 }
 
+/* --- Subject picker -------------------------------------------------------
+   Personalise's subject selection. A fieldset of large, fully-labelled targets
+   rather than a row of small chips: this is a choice a student makes once, and
+   a misclick here silently degrades every answer afterwards. */
+
+.subjects {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.subjects .field__hint {
+  margin: 0 0 var(--space-md);
+}
+
+.subjects__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.subject {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.subject:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.subject[data-selected='true'] {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.subject input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.subject__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.subject__name {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.subject[data-selected='true'] .subject__name {
+  color: var(--accent);
+}
+
+.subject__blurb {
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
 /* An explanatory note inside a pane: states a fixed behaviour rather than
    offering a control for it. Quieter than a field, because there is nothing to
    change here. */

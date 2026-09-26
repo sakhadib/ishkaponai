@@ -796,6 +796,14 @@ export class AgentHost {  private readonly sandbox = new PythonSandbox()
     return {
       userInstructions: this.settings.userInstructions,
       preferredLanguage,
+      // Personalise. Passed as one object rather than four arguments so the
+      // profile can grow a field without changing this signature again.
+      student: {
+        name: this.settings.studentName,
+        age: this.settings.studentAge,
+        grade: this.settings.studentGrade,
+        subjects: this.settings.studySubjects
+      },
       budgetWarning: budget.warning,
       environment: {
         platform: process.platform,

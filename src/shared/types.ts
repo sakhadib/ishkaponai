@@ -18,7 +18,16 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 /** `auto` mirrors the language of the user's message. */
 export type LanguagePref = 'auto' | 'en' | 'bn'
 
-export type Subject = 'physics' | 'chemistry' | 'math' | 'general'
+/**
+ * The subjects the product covers. `general` is not offered in Personalise — it
+ * is the value a session takes when no subject is chosen, and it is a fallback
+ * rather than a preference.
+ */
+export const STUDY_SUBJECTS = ['math', 'physics', 'chemistry'] as const
+
+export type StudySubject = (typeof STUDY_SUBJECTS)[number]
+
+export type Subject = StudySubject | 'general'
 
 export type Role = 'user' | 'assistant' | 'system' | 'tool'
 
@@ -105,6 +114,23 @@ export interface Settings {
   pythonTimeoutMs: number
   showThinking: boolean
   maxOutputTokens: number
+  /**
+   * Who the answers are for. Injected into the system prompt so the model can
+   * pitch at the right level and stick to the right syllabus.
+   *
+   * Deliberately *not* a `Profile` object. Flat fields keep the migration and
+   * validation paths unchanged, and a nested object here would be a structure
+   * with one consumer. Every field is optional, because a student who has told
+   * us nothing must still get a working app.
+   */
+  studentName: string
+  /** Age in years, or `null` when not given. */
+  studentAge: number | null
+  /** Free text: "Class 10", "Year 11", "O-Level", "HSC". Not enumerated,
+   *  because what a student calls their year depends on their curriculum. */
+  studentGrade: string
+  /** Subjects the student mainly wants to study. */
+  studySubjects: StudySubject[]
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -114,7 +140,11 @@ export const DEFAULT_SETTINGS: Settings = {
   userInstructions: '',
   pythonTimeoutMs: 60_000,
   showThinking: true,
-  maxOutputTokens: 2048
+  maxOutputTokens: 2048,
+  studentName: '',
+  studentAge: null,
+  studentGrade: '',
+  studySubjects: []
 }
 
 /**

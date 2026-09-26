@@ -1,8 +1,34 @@
-import { resolve } from 'node:path'
+import { copyFileSync, mkdirSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import type { Plugin } from 'vite'
 
 const shared = resolve('src/shared')
+
+/**
+ * Emits `src/bootstrap.cjs` to `out/bootstrap.cjs`.
+ *
+ * This is not optional. `package.json` points `main` at the bootstrap, because
+ * `app.requestSingleInstanceLock()` and `app.setAppUserModelId()` must run
+ * before `ready` and ESM modules load too late to guarantee that. But
+ * electron-vite only compiles the TypeScript entries, so without this plugin the
+ * built `out/` has no `bootstrap.cjs` and Electron dies at startup with
+ * "Cannot find .cjs file".
+ *
+ * Runs in dev as well as build, since `electron-vite dev` also launches Electron
+ * against the same `out/` entry.
+ */
+function emitBootstrap(): Plugin {
+  return {
+    name: 'ishkapon:emit-bootstrap',
+    buildStart() {
+      const target = resolve('out/bootstrap.cjs')
+      mkdirSync(dirname(target), { recursive: true })
+      copyFileSync(resolve('src/bootstrap.cjs'), target)
+    }
+  }
+}
 
 /**
  * Two output module systems are in play, and that is forced rather than chosen:
@@ -19,7 +45,7 @@ const shared = resolve('src/shared')
  */
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), emitBootstrap()],
     resolve: {
       alias: { '@shared': shared }
     },

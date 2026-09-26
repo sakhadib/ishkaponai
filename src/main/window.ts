@@ -14,11 +14,15 @@ export interface WindowEntryPoints {
 export function resolveEntryPoints(): WindowEntryPoints {
   return {
     url: process.env.ELECTRON_RENDERER_URL,
-    file: join(__dirname, '../renderer/index.html')
+    file: join(import.meta.dirname, '../renderer/index.html')
   }
 }
 
-export async function createMainWindow(entry: WindowEntryPoints): Promise<BrowserWindow> {
+export async function createMainWindow(
+  entry: WindowEntryPoints,
+  /** Resolved concrete theme (`system` already applied), for preload + nativeTheme. */
+  theme: 'light' | 'dark' = 'dark'
+): Promise<BrowserWindow> {
   const state = await loadWindowState()
 
   const window = new BrowserWindow({
@@ -33,7 +37,10 @@ export async function createMainWindow(entry: WindowEntryPoints): Promise<Browse
     title: 'ISHKAPON AI',
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      // Emitted as CommonJS with an explicit `.cjs` extension: sandboxed
+      // preload scripts cannot use ESM imports.
+      preload: join(import.meta.dirname, '../preload/index.cjs'),
+      additionalArguments: [`--ishkapon-theme=${theme}`],
       // Renderer runs sandboxed with no direct Node access; the preload
       // bridge is the only surface it can reach.
       contextIsolation: true,

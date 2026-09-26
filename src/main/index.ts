@@ -1,5 +1,4 @@
 import { app, BrowserWindow, session, shell } from 'electron'
-import { registerIpcHandlers } from './ipc'
 import { buildApplicationMenu } from './menu'
 import { flushWindowState } from './store'
 import { createMainWindow, resolveEntryPoints } from './window'
@@ -59,7 +58,6 @@ async function bootstrap(): Promise<void> {
   app.whenReady().then(async () => {
     applyContentSecurityPolicy()
     buildApplicationMenu()
-    registerIpcHandlers()
 
     await createMainWindow(resolveEntryPoints())
 

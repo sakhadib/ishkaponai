@@ -5,17 +5,19 @@
   "description": "ISHKAPON AI desktop application",
   "author": "ISHKAPON",
   "license": "MIT",
-  "main": "./out/main/index.js",
+  "main": "./out/bootstrap.cjs",
+  "type": "module",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
     "build": "npm run typecheck && electron-vite build",
     "typecheck:node": "tsc -p tsconfig.node.json --noEmit",
+    "typecheck:preload": "tsc -p tsconfig.preload.json --noEmit",
     "typecheck:web": "tsc -p tsconfig.web.json --noEmit",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "npm run typecheck:node && npm run typecheck:preload && npm run typecheck:web",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
@@ -24,6 +26,7 @@
     "clean": "node -e \"require('node:fs').rmSync('out',{recursive:true,force:true});require('node:fs').rmSync('release',{recursive:true,force:true})\""
   },
   "devDependencies": {
+    "@fontsource-variable/roboto": "^5.3.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -31,14 +34,27 @@
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "katex": "^0.18.9",
+    "mermaid": "^12.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "typescript": "^7.0.2",
-    "vite": "^7.3.6"
+    "vite": "^7.3.6",
+    "zustand": "^5.0.15"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "electron-winstaller@5.4.0": true
+  },
+  "dependencies": {
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "ai": "^7.0.116",
+    "pyodide": "^0.29.5",
+    "zod": "^4.6.5"
   }
 }

@@ -8,7 +8,7 @@
     "electron.vite.config.ts",
     "scripts/**/*.mjs",
     "src/main/**/*.ts",
-    "src/preload/**/*.ts",
+    "src/agent/**/*.ts",
     "src/shared/**/*.ts"
   ]
 }

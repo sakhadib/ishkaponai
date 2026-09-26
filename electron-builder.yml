@@ -14,6 +14,12 @@ files:
 
 asar: true
 
+# Pyodide is loaded by the agent host via WebAssembly and reads its runtime
+# assets (pyodide.asm.wasm, python_stdlib.zip, package wheels) off disk.
+# Unpack it so the WASM loader always sees real files rather than asar paths.
+asarUnpack:
+  - node_modules/pyodide/**
+
 # ---------------------------------------------------------------------------
 # Windows
 # ---------------------------------------------------------------------------

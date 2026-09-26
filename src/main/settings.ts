@@ -14,7 +14,7 @@
 import type { Database } from './db'
 import { readOptionalString } from './row-values'
 import { isLanguagePref } from './sessions'
-import { DEFAULT_SETTINGS, STUDY_SUBJECTS } from '@shared/types'
+import { DEFAULT_SETTINGS, LIMITS, STUDY_SUBJECTS } from '@shared/types'
 import type { Settings, StudySubject } from '@shared/types'
 
 const SETTINGS_KEY = 'app'
@@ -22,27 +22,19 @@ const SETTINGS_KEY = 'app'
 /** Bump when the shape of `values` changes, and add a step to `migrate`. */
 const SETTINGS_VERSION = 1
 
-/** Ceilings and floors for the two numeric settings, in one place. */
-export const LIMITS = {
-  pythonTimeoutMs: { min: 1_000, max: 300_000 },
-  maxOutputTokens: { min: 256, max: 32_768 },
-  /** Layer 2 of the system prompt is user text; keep it bounded. */
-  userInstructionsMaxLength: 8_000,
-  /**
-   * Personalise is injected into the system prompt on every single turn, so it
-   * is the one place where unbounded user text is a per-request cost rather than
-   * a one-off. Kept short enough that a student cannot paste a novel into it.
-   */
-  studentNameMaxLength: 60,
-  studentGradeMaxLength: 60
-} as const
-
 /**
- * Trims a free-text field and enforces its length cap.
+ * Normalises a free-text field for storage and enforces its length cap.
  *
- * A newlines-and-runs-of-spaces collapse matters here more than usual: these
- * values are interpolated into a prompt as list items, so a stray newline would
- * let a student inject a fake bullet into their own profile.
+ * The whitespace collapse matters more here than usual: these values are
+ * interpolated into a prompt as list items, so a stray newline would let a
+ * student inject a fake bullet into their own profile.
+ *
+ * **This runs on commit, never per keystroke.** See `lib/useDraftField.ts` in
+ * the renderer. Applying it to a value the student is still typing into is what
+ * made it impossible to enter a second word in their own name: the trailing
+ * space was trimmed on the way through and the character vanished before the
+ * next one could be typed. Trimming is right for what gets *stored* and wrong
+ * for what is being *edited*, and the fix is to keep those two moments apart.
  */
 function collapse(value: string, max = 200): string {
   const flat = value.replace(/\s+/gu, ' ').trim()

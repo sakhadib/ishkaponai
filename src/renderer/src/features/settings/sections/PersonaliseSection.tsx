@@ -15,10 +15,10 @@
  *    each field changes, so an empty field reads as a deliberate choice rather
  *    than an oversight.
  */
-import { useEffect, useState } from 'react'
-import { STUDY_SUBJECTS, type StudySubject } from '@shared/types'
+import { LIMITS, STUDY_SUBJECTS, type StudySubject } from '@shared/types'
 import { SettingsPanel } from '@/features/settings/sections/SettingsPanel'
 import { Field } from '@/components/ui'
+import { useDraftField } from '@/lib/useDraftField'
 import { useSettingsStore } from '@/store/settingsStore'
 
 /** Human labels. The wire value stays lowercase for the prompt. */
@@ -38,33 +38,37 @@ export function PersonaliseSection(): React.JSX.Element {
   const settings = useSettingsStore((state) => state.settings)
   const update = useSettingsStore((state) => state.update)
 
-  // Age is a number in settings but a text field here, so it is held as text and
-  // committed on blur. Committing on every keystroke would write "1" then "16"
-  // then "167" to SQLite as the student types a two-digit number.
-  const [age, setAge] = useState(settings.studentAge === null ? '' : String(settings.studentAge))
+  // All three text fields edit locally and commit on blur, because main
+  // normalises what it stores and a per-keystroke round trip applies that
+  // normalisation to text that is still being typed — which is what made it
+  // impossible to type a second word in your own name. See `useDraftField`.
+  const name = useDraftField(settings.studentName, (raw) => {
+    void update({ studentName: raw })
+  })
 
-  useEffect(() => {
-    setAge(settings.studentAge === null ? '' : String(settings.studentAge))
-  }, [settings.studentAge])
+  const grade = useDraftField(settings.studentGrade, (raw) => {
+    void update({ studentGrade: raw })
+  })
 
-  const commitAge = (): void => {
-    const trimmed = age.trim()
-
-    if (trimmed === '') {
-      if (settings.studentAge !== null) void update({ studentAge: null })
-      return
+  // Age is a number in settings but a text field here.
+  const age = useDraftField(
+    settings.studentAge === null ? '' : String(settings.studentAge),
+    (raw) => {
+      const trimmed = raw.trim()
+      // Blank is a real answer — "not given" — and has to survive as `null`
+      // rather than as the empty string the input holds.
+      if (trimmed === '') {
+        if (settings.studentAge !== null) void update({ studentAge: null })
+        return
+      }
+      const parsed = Number(trimmed)
+      // Unparseable: commit nothing and leave the text as typed, so the student
+      // can see it and correct it. Resetting the field would read as the app
+      // silently rejecting them.
+      if (!Number.isFinite(parsed)) return
+      void update({ studentAge: Math.round(parsed) })
     }
-
-    const parsed = Number(trimmed)
-    if (!Number.isFinite(parsed)) {
-      // Put the field back to what is actually stored rather than leaving an
-      // unparseable value sitting in the input looking accepted.
-      setAge(settings.studentAge === null ? '' : String(settings.studentAge))
-      return
-    }
-
-    void update({ studentAge: Math.round(parsed) })
-  }
+  )
 
   const toggleSubject = (subject: StudySubject): void => {
     const next = settings.studySubjects.includes(subject)
@@ -87,10 +91,14 @@ export function PersonaliseSection(): React.JSX.Element {
           id="setting-student-name"
           className="field__input"
           type="text"
-          value={settings.studentName}
-          placeholder="e.g. Nusrat"
+          value={name.value}
+          maxLength={LIMITS.studentNameMaxLength}
+          placeholder="e.g. Nusrat Jahan"
           autoComplete="off"
-          onChange={(event) => void update({ studentName: event.target.value })}
+          onChange={(event) => name.onChange(event.target.value)}
+          onFocus={name.onFocus}
+          onBlur={name.onBlur}
+          onKeyDown={name.onKeyDown}
         />
       </Field>
 
@@ -106,16 +114,12 @@ export function PersonaliseSection(): React.JSX.Element {
           min={5}
           max={120}
           step={1}
-          value={age}
+          value={age.value}
           placeholder="e.g. 16"
-          onChange={(event) => setAge(event.target.value)}
-          onBlur={commitAge}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              commitAge()
-            }
-          }}
+          onChange={(event) => age.onChange(event.target.value)}
+          onFocus={age.onFocus}
+          onBlur={age.onBlur}
+          onKeyDown={age.onKeyDown}
         />
       </Field>
 
@@ -128,10 +132,14 @@ export function PersonaliseSection(): React.JSX.Element {
           id="setting-student-grade"
           className="field__input"
           type="text"
-          value={settings.studentGrade}
+          value={grade.value}
+          maxLength={LIMITS.studentGradeMaxLength}
           placeholder="e.g. Class 10, Year 11, O-Level"
           autoComplete="off"
-          onChange={(event) => void update({ studentGrade: event.target.value })}
+          onChange={(event) => grade.onChange(event.target.value)}
+          onFocus={grade.onFocus}
+          onBlur={grade.onBlur}
+          onKeyDown={grade.onKeyDown}
         />
       </Field>
 

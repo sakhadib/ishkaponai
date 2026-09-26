@@ -23,6 +23,29 @@ export type Platform = 'win32' | 'darwin' | 'linux' | 'freebsd' | 'openbsd' | 's
 export type LanguagePref = 'auto' | 'en' | 'bn'
 
 /**
+ * Ceilings and floors for the settings that have either.
+ *
+ * Shared rather than private to main, because the renderer needs the two
+ * `MaxLength` values as the `maxLength` attribute on its inputs. A limit the
+ * renderer has to restate as a literal is a limit that will drift: the field
+ * stops you at 60 and main silently truncates at 40, and the difference only
+ * shows up as characters vanishing as you type.
+ */
+export const LIMITS = {
+  pythonTimeoutMs: { min: 1_000, max: 300_000 },
+  maxOutputTokens: { min: 256, max: 32_768 },
+  /** System-prompt layer 3 is user text; keep it bounded. */
+  userInstructionsMaxLength: 8_000,
+  /**
+   * Personalise is injected into the system prompt on every single turn, so it
+   * is the one place where unbounded user text is a per-request cost rather than
+   * a one-off. Kept short enough that a student cannot paste a novel into it.
+   */
+  studentNameMaxLength: 60,
+  studentGradeMaxLength: 60
+} as const
+
+/**
  * The subjects the product covers. `general` is not offered in Personalise — it
  * is the value a session takes when no subject is chosen, and it is a fallback
  * rather than a preference.

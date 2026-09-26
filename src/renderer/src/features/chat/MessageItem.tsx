@@ -5,7 +5,12 @@
  * same component as a live turn — there is no separate "history" renderer.
  */
 import type { Message, ToolCall } from '@shared/types'
-import { ExecutionCard, toStoredExecutionSource } from '@/features/chat/ExecutionCard'
+import {
+  ExecutionCard,
+  describeFailure,
+  isFailedStatus,
+  toStoredExecutionSource
+} from '@/features/chat/ExecutionCard'
 import { ThinkingBlock } from '@/features/chat/ThinkingBlock'
 import { CopyButton } from '@/components/CopyButton'
 import { Markdown } from '@/lib/markdown'
@@ -27,7 +32,14 @@ const ROLE_LABEL: Record<Message['role'], string> = {
 export function MessageItem({ message, toolCalls, showThinking }: MessageItemProps): React.JSX.Element {
   const ordered = [...toolCalls].sort((a, b) => a.seq - b.seq)
   const hasContent = message.content.trim() !== ''
-  const hasThinking = message.reasoning !== null && message.reasoning.trim() !== ''
+
+  // Failed attempts are folded into the thinking block. They stay in SQLite and
+  // stay in `ordered` for numbering, so a step the model refers to as "Step 2"
+  // is still labelled Step 2 even if Step 1 failed and was hidden.
+  const failures = ordered
+    .filter((call) => isFailedStatus(call.status))
+    .map((call) => describeFailure(call.id, call.error, call.status))
+  const steps = ordered.filter((call) => !isFailedStatus(call.status))
 
   return (
     <article className="message" data-role={message.role} data-status={message.status}>
@@ -38,11 +50,12 @@ export function MessageItem({ message, toolCalls, showThinking }: MessageItemPro
         </span>
       </header>
 
-      {hasThinking ? (
+      {hasContent || failures.length > 0 ? (
         <ThinkingBlock
           reasoning={message.reasoning ?? ''}
           streaming={message.status === 'streaming'}
           show={showThinking}
+          failures={failures}
         />
       ) : null}
 
@@ -54,8 +67,12 @@ export function MessageItem({ message, toolCalls, showThinking }: MessageItemPro
         )
       ) : null}
 
-      {ordered.map((call, index) => (
-        <ExecutionCard key={call.id} source={toStoredExecutionSource(call)} index={index} />
+      {steps.map((call) => (
+        <ExecutionCard
+          key={call.id}
+          source={toStoredExecutionSource(call)}
+          index={ordered.indexOf(call)}
+        />
       ))}
 
       {message.status === 'error' ? (

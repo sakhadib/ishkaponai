@@ -12,7 +12,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Message, ToolCall } from '@shared/types'
 import { Composer } from '@/features/chat/Composer'
-import { ExecutionCard, toExecutionSource } from '@/features/chat/ExecutionCard'
+import {
+  ExecutionCard,
+  describeFailure,
+  isFailedStatus,
+  toExecutionSource
+} from '@/features/chat/ExecutionCard'
 import { MessageItem } from '@/features/chat/MessageItem'
 import { ThinkingBlock } from '@/features/chat/ThinkingBlock'
 import { CopyButton } from '@/components/CopyButton'
@@ -197,12 +202,28 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
 
   const liveParts = useMemo(() => {
     if (!streamingHere) return []
-    return turn.toolCards
-      .slice()
-      .sort((a, b) => a.seq - b.seq)
-      .map((card, index) => (
-        <ExecutionCard key={card.toolCallId} source={toExecutionSource(card)} index={index} />
+
+    // Same split as the stored transcript: failed attempts are folded into the
+    // thinking block rather than shown as steps, but they keep their position
+    // so a "Step 2" reference from the model still lines up.
+    const ordered = turn.toolCards.slice().sort((a, b) => a.seq - b.seq)
+
+    return ordered
+      .filter((card) => !isFailedStatus(card.status))
+      .map((card) => (
+        <ExecutionCard
+          key={card.toolCallId}
+          source={toExecutionSource(card)}
+          index={ordered.indexOf(card)}
+        />
       ))
+  }, [streamingHere, turn.toolCards])
+
+  const liveFailures = useMemo(() => {
+    if (!streamingHere) return []
+    return turn.toolCards
+      .filter((card) => isFailedStatus(card.status))
+      .map((card) => describeFailure(card.toolCallId, card.error, card.status))
   }, [streamingHere, turn.toolCards])
 
   return (
@@ -231,8 +252,13 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
                 <span className="message__time">working…</span>
               </header>
 
-              {turn.reasoning.trim() !== '' ? (
-                <ThinkingBlock reasoning={turn.reasoning} streaming show={settings.showThinking} />
+              {turn.reasoning.trim() !== '' || liveFailures.length > 0 ? (
+                <ThinkingBlock
+                  reasoning={turn.reasoning}
+                  streaming
+                  show={settings.showThinking}
+                  failures={liveFailures}
+                />
               ) : null}
 
               {turn.text.trim() === '' && turn.toolCards.length === 0 ? (

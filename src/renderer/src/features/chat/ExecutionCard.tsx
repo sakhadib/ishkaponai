@@ -32,6 +32,68 @@ const STATUS_LABEL: Record<ToolCall['status'], string> = {
   cancelled: 'Cancelled'
 }
 
+/**
+ * Statuses that mean "this attempt did not produce a result".
+ *
+ * A failed attempt is not a step. The model occasionally calls the tool with
+ * malformed arguments and immediately retries, and surfacing that as a step
+ * shows a student a raw AI SDK validation error they have no way to act on. The
+ * attempt is still recorded — it is in SQLite and visible to a developer — but
+ * in the UI it is folded into the collapsed thinking block.
+ *
+ * A `running` call is deliberately *not* in this set: it is work in progress,
+ * not a failure, and hiding it would make the UI look stuck.
+ */
+const FAILED_STATUSES: ReadonlySet<ToolCall['status']> = new Set<ToolCall['status']>([
+  'error',
+  'timeout',
+  'cancelled'
+])
+
+export function isFailedStatus(status: ToolCall['status']): boolean {
+  return FAILED_STATUSES.has(status)
+}
+
+/** A failed attempt, reduced to what a student needs: that it happened, and why. */
+export interface FailedAttempt {
+  id: string
+  /** Short, non-technical label. Never the raw error. */
+  reason: string
+  /** Raw text, exposed only as a tooltip for anyone who wants to dig in. */
+  detail: string | null
+}
+
+/**
+ * Maps a raw tool error onto a short human label.
+ *
+ * The raw text is things like
+ * `AI_InvalidToolInputError: ... AI_TypeValidationError: Value: {}`, which is
+ * SDK internals. Showing it verbatim to a school student is noise at best, so it
+ * is reduced to a phrase and the original is kept only for the tooltip.
+ */
+export function describeFailure(
+  id: string,
+  error: string | null,
+  status: ToolCall['status']
+): FailedAttempt {
+  if (status === 'timeout') return { id, reason: 'timed out', detail: error }
+  if (status === 'cancelled') return { id, reason: 'stopped before it finished', detail: error }
+  if (error === null || error.trim() === '') return { id, reason: 'failed', detail: null }
+
+  if (/AI_InvalidToolInputError|AI_TypeValidationError|tool input/i.test(error)) {
+    return { id, reason: 'was called incorrectly', detail: error }
+  }
+  if (/AI_NoSuchToolError|no such tool|unknown tool/i.test(error)) {
+    return { id, reason: 'asked for a tool that does not exist', detail: error }
+  }
+  if (/interrupt/i.test(error)) return { id, reason: 'was interrupted', detail: error }
+
+  // Unknown shape: show the first line, trimmed, rather than nothing at all.
+  const firstLine = error.split('\n')[0]?.trim() ?? ''
+  const short = firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine
+  return { id, reason: short === '' ? 'failed' : short, detail: error }
+}
+
 export function toExecutionSource(card: ToolCard): ExecutionSource {
   return {
     id: card.toolCallId,

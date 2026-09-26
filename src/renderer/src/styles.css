@@ -758,6 +758,45 @@ select.field__input {
   white-space: pre-wrap;
 }
 
+.thinking__text {
+  white-space: pre-wrap;
+}
+
+/* Failed tool attempts, folded out of the transcript. A count on the summary
+   is the only thing visible until the student asks for it, so a model that
+   retries a malformed call does not surface SDK error text at them. */
+.thinking__badge {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.thinking__failures {
+  margin-top: 10px;
+  white-space: normal;
+}
+
+.thinking__failures-summary {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.thinking__failures-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.thinking__failure {
+  margin: 2px 0;
+}
+
 /* --- Execution cards ------------------------------------------------------ */
 
 .exec-card {

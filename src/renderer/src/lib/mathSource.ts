@@ -55,30 +55,86 @@ function isMathContent(inner: string): boolean {
 }
 
 /**
- * Rewrites `\[ … \]` to display math and `\( … \)` to inline math.
+ * The real `$$…$$` display-math spans in `text`, as `[start, end)` index pairs.
  *
- * The `(?<!\$)` lookbehind stops an already-wrapped `$$\[ … \]$$` from being
- * wrapped a second time.
+ * A single `$$` that never closes is not a span. Leaving it out is what stops
+ * the structuring pass below from treating half an equation as a gap to rewrite,
+ * which is how a doubled pair of delimiters used to appear.
  */
-function rewriteLatexBrackets(text: string): string {
-  return text
-    .replace(/(?<!\$)\\\[([\s\S]*?)\\\]/g, (_match, body: string) => `$$${body}$$`)
-    .replace(/(?<!\$)\\\(([\s\S]*?)\\\)/g, (_match, body: string) => `$${body}$`)
+function displaySpans(text: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = []
+  let i = 0
+  while (i < text.length) {
+    if (!text.startsWith('$$', i)) {
+      i += 1
+      continue
+    }
+    const close = text.indexOf('$$', i + 2)
+    if (close === -1) break
+    spans.push([i, close + 2])
+    i = close + 2
+  }
+  return spans
 }
 
 /**
- * Wraps a bare LaTeX environment in `$$`, e.g. an undelimited
- * `\begin{align} … \end{align}`.
+ * Applies `rewrite` to the text *between* `$$` spans and never inside one.
  *
- * The back-reference in the pattern is what keeps `\begin{align}` from pairing
- * with a stray `\end{equation}`. The pattern has exactly one capture group, so
- * the replacement wraps the whole match — the environment and its body — and
- * must not read a second group.
+ * Spans found before the rewrite are copied byte for byte. That is the whole fix
+ * for the doubled delimiters: the old version tested `(?<!\$)` immediately
+ * before `\begin`, which is a single-character lookbehind and cannot see that a
+ * `$$` opened on the *previous line*. An already-delimited `\begin{align}`
+ * therefore got wrapped a second time, producing
+ * `$$\n$$\begin{align}…\end{align}$$\n$$`, and remark-math parsed only the outer
+ * pair — leaving the inner `$$` visible on screen. That is the report this fixes.
  */
-function wrapBareEnvironments(text: string): string {
-  return text.replace(
-    /(?<!\$)\\begin\{([a-zA-Z*]+)\}[\s\S]*?\\end\{\1\}/g,
-    (match: string) => `$$${match}$$`
+function outsideSpans(text: string, rewrite: (gap: string) => string): string {
+  const spans = displaySpans(text)
+  if (spans.length === 0) return rewrite(text)
+
+  let out = ''
+  let cursor = 0
+  for (const [start, end] of spans) {
+    out += rewrite(text.slice(cursor, start))
+    out += text.slice(start, end)
+    cursor = end
+  }
+  return out + rewrite(text.slice(cursor))
+}
+
+/**
+ * Rewrites the undelimited LaTeX forms into real `$$` display blocks.
+ *
+ * **One kind of rewrite per pass**, and every pass re-reads the spans. Folding
+ * them into a single pass over each gap did not work, because the second rewrite
+ * then saw the `$$` the first one had just inserted: `\[\begin{align}…\end{align}\]`
+ * became `$$` + `$$\begin{align}…\end{align}$$` + `$$` and parsed as two
+ * equations with the delimiters in between.
+ *
+ * The newlines are unconditional and deliberate. `\[…\]` and a bare environment
+ * are *display* mathematics in LaTeX, so making them blocks is correct even when
+ * a model writes them mid-sentence — and remark-math only emits a display node
+ * when the opening `$$` starts a line. Without the newlines, a wrapped
+ * environment became inline math, which cannot span the blank line that follows
+ * it, so the body was split and the text after it was swallowed.
+ */
+function structureMath(text: string): string {
+  const withDisplayBrackets = outsideSpans(text, (gap) =>
+    gap.replace(/\\\[([\s\S]*?)\\\]/g, (_match, body: string) => `\n$$\n${body}\n$$\n`)
+  )
+
+  const withBareEnvironments = outsideSpans(withDisplayBrackets, (gap) =>
+    // The back-reference keeps `\begin{align}` from pairing with a stray
+    // `\end{equation}`, and the single capture group means the replacement must
+    // wrap the entire match.
+    gap.replace(
+      /\\begin\{([a-zA-Z*]+)\}[\s\S]*?\\end\{\1\}/g,
+      (match: string) => `\n$$\n${match}\n$$\n`
+    )
+  )
+
+  return outsideSpans(withBareEnvironments, (gap) =>
+    gap.replace(/\\\(([\s\S]*?)\\\)/g, (_match, body: string) => `$${body}$`)
   )
 }
 
@@ -145,7 +201,10 @@ function escapeNonMathDollars(text: string): string {
 
 /** Applies the prose-only transforms to one segment. */
 function transformProse(text: string): string {
-  return escapeNonMathDollars(wrapBareEnvironments(rewriteLatexBrackets(text)))
+  // Structure first, then escape. The order matters: the structuring pass
+  // creates `$$` spans of its own, and the escaper has to see them as real
+  // mathematics rather than escape the delimiters it just inserted.
+  return escapeNonMathDollars(structureMath(text))
 }
 
 /**

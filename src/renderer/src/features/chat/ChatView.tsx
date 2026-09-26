@@ -25,7 +25,7 @@ import { ThoughtBlock } from '@/features/chat/ThoughtBlock'
 import { CopyButton } from '@/components/CopyButton'
 import { Markdown } from '@/lib/markdown'
 import { call, callQuiet } from '@/lib/bridge'
-import { buildCompletedRows, useTurnStore } from '@/store/turnStore'
+import { buildCompletedRows, isTurnSettled, useTurnStore } from '@/store/turnStore'
 import { useSessionStore } from '@/store/sessionStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useUiStore } from '@/store/uiStore'
@@ -60,6 +60,7 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
   const send = useTurnStore((state) => state.send)
   const stop = useTurnStore((state) => state.stop)
   const reset = useTurnStore((state) => state.reset)
+  const showUserMessage = useSessionStore((state) => state.showUserMessage)
 
   const scroller = useRef<HTMLDivElement>(null)
   const pinnedToBottom = useRef(true)
@@ -114,8 +115,15 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
   // Hand a finished turn over to the session store exactly once. The key
   // includes the message id, so a second turn in the same session is not
   // swallowed by the first one's marker.
+  //
+  // "Finished" includes a turn that *failed*. A failed turn streamed real text
+  // and ran real calculations, and gating on `phase === 'idle'` meant that
+  // content was never handed over — so the live view was hidden (streaming had
+  // gone false) and nothing had replaced it. The transcript silently rewrote
+  // itself to omit the question, the partial answer and the error. Reloading
+  // brought all of it back, because SQLite had it the whole time.
   useEffect(() => {
-    if (turn.phase !== 'idle' || turn.streaming) return
+    if (!isTurnSettled(turn.phase, turn.streaming)) return
     const sessionKey = turn.sessionId
     if (sessionKey === null) return
     const key = `${sessionKey}:${turn.messageId ?? ''}`
@@ -128,7 +136,12 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
       turn.text,
       turn.reasoning,
       turn.toolCards,
-      turn.usage
+      turn.usage,
+      // Matches what main writes to the same row. A stopped turn arrives as
+      // `turn.finished`, so main records it as `complete` and so must this, or
+      // the streamed view and the reloaded transcript would disagree about the
+      // same row.
+      turn.phase === 'error' ? 'error' : 'complete'
     )
     // Show the streamed parts immediately, then reconcile with SQLite, which
     // is the source of truth and persists as the turn streams (§13.6).
@@ -188,15 +201,24 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
         setDraft('')
         reset()
         pinnedToBottom.current = true
-        await send(sessionId, text)
+        const started = await send(sessionId, text)
+        // The new session has no `detail` yet, so the question is shown by
+        // selecting it — which is also what gives the transcript something to
+        // hold the answer.
         await selectSession(sessionId)
+        if (started !== null) showUserMessage(started.userMessage)
         await loadSessions()
         return
       }
 
       setDraft('')
       pinnedToBottom.current = true
-      await send(sessionId, text)
+      // The question goes on screen here, before the model has produced a single
+      // token. It used to wait for the turn to end and the transcript to be
+      // re-read, so a second message in a session was invisible for the entire
+      // time the student was waiting for the answer to it.
+      const started = await send(sessionId, text)
+      if (started !== null) showUserMessage(started.userMessage)
     })()
   }, [
     activeId,
@@ -208,7 +230,8 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
     selectSession,
     send,
     settings.modelId,
-    settings.preferredLanguage
+    settings.preferredLanguage,
+    showUserMessage
   ])
 
   const onStop = useCallback(() => {
@@ -255,6 +278,16 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
       .filter((card) => isFailedStatus(card.status))
       .map((card) => describeFailure(card.toolCallId, card.error, card.status))
   }, [streamingHere, liveOrdered])
+
+  /**
+   * Whether the failure notice belongs on this transcript.
+   *
+   * Scoped to the session that produced it, and to a turn that is actually
+   * over. Without the first check, a failure in a background session would
+   * surface in whichever conversation the student happened to be reading.
+   */
+  const showTurnError =
+    turn.error !== null && turn.sessionId !== null && turn.sessionId === activeId
 
   // A generated title belongs to the session, not the turn, so it is applied
   // straight to the session store rather than buffered here.
@@ -315,13 +348,6 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
                 <Markdown className="message__markdown">{turn.text}</Markdown>
               ) : null}
 
-              {turn.error !== null ? (
-                <p className="message__status message__status--error">
-                  {turn.error}
-                  {turn.errorFatal ? ' This conversation cannot continue until the problem is fixed.' : ''}
-                </p>
-              ) : null}
-
               <footer className="message__foot">
                 {turn.text.trim() === '' ? null : (
                   <CopyButton value={turn.text} label="Copy response" />
@@ -335,6 +361,24 @@ export function ChatView({ emptyState }: ChatViewProps): React.JSX.Element {
                 ) : null}
               </footer>
             </section>
+          ) : null}
+
+          {/*
+            The failure notice, deliberately *outside* the live section.
+
+            It used to live inside it, which meant it vanished at exactly the
+            moment it mattered: a failed turn sets `streaming` false, the live
+            section stopped rendering, and the explanation of what went wrong went
+            with it — at the same instant the partial answer and its cards did.
+            Here it survives the handover, because the text and cards have by
+            now become ordinary messages and this is the only thing left saying
+            the turn did not finish.
+          */}
+          {showTurnError ? (
+            <p className="message__status message__status--error" role="alert">
+              {turn.error}
+              {turn.errorFatal ? ' This conversation cannot continue until the problem is fixed.' : ''}
+            </p>
           ) : null}
         </div>
       </div>

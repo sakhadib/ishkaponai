@@ -34,6 +34,16 @@ export interface SessionState {
   refreshDetail: () => Promise<void>
   /** Drops a finished assistant message from SQLite once it has streamed in. */
   applyCompletedTurn: (messages: Message[], toolCalls: ToolCall[]) => void
+  /**
+   * Puts the question on screen the moment Send is pressed.
+   *
+   * The row already exists in SQLite by the time this is called, so this is not
+   * a guess: it merges a row that is already true. Without it the question was
+   * invisible for the whole turn and appeared only when the transcript was
+   * re-read afterwards, so a second message in a session looked like it had
+   * never been sent until the answer came back.
+   */
+  showUserMessage: (message: Message) => void
   setError: (message: string | null) => void
 }
 
@@ -201,12 +211,30 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   applyCompletedTurn: (messages, toolCalls) => {
     const detail = get().detail
     if (!detail) return
+    // A turn can finish after the student has navigated to another conversation.
+    // Splicing its rows into whatever transcript is now on screen would put one
+    // chat's answer inside another, so the session is checked rather than
+    // assumed.
+    if (!belongsTo(detail, messages, toolCalls)) return
     set({
       detail: {
         ...detail,
-        messages: mergeById(detail.messages, messages),
-        toolCalls: mergeById(detail.toolCalls, toolCalls)
+        // Sorted by `seq`, because a handed-over row arrives with `seq: 0` as a
+        // placeholder and would otherwise sort ahead of the real history. SQLite
+        // is the authority on ordering; this only has to agree with it.
+        messages: mergeById(detail.messages, messages).sort(bySeq),
+        toolCalls: mergeById(detail.toolCalls, toolCalls).sort(bySeq)
       }
+    })
+  },
+
+  showUserMessage: (message) => {
+    const detail = get().detail
+    if (!detail) return
+    if (detail.session.id !== message.sessionId) return
+    if (detail.messages.some((existing) => existing.id === message.id)) return
+    set({
+      detail: { ...detail, messages: [...detail.messages, message].sort(bySeq) }
     })
   },
 
@@ -218,6 +246,33 @@ function mergeById<T extends { id: string }>(existing: T[], incoming: T[]): T[] 
   const byId = new Map(existing.map((item) => [item.id, item]))
   for (const item of incoming) byId.set(item.id, item)
   return [...byId.values()]
+}
+
+/**
+ * Transcript order.
+ *
+ * A tie on `seq` keeps the order the rows arrived in, because `Array.sort` is
+ * stable and a handed-over assistant row shares its `seq` with nothing else
+ * once SQLite's real sequence arrives. A plain numeric compare is not enough
+ * here: two rows at `seq: 0` would otherwise be left in arbitrary order and the
+ * answer could render above the question that prompted it.
+ */
+function bySeq<T extends { seq: number }>(a: T, b: T): number {
+  return a.seq - b.seq
+}
+
+/**
+ * True when every incoming row belongs to the transcript now on screen.
+ *
+ * Empty is treated as belonging, so a hand-off that produced nothing is a no-op
+ * rather than a discarded one.
+ */
+function belongsTo(
+  detail: SessionDetail,
+  messages: readonly Message[],
+  toolCalls: readonly ToolCall[]
+): boolean {
+  return [...messages, ...toolCalls].every((row) => row.sessionId === detail.session.id)
 }
 
 /** Case- and whitespace-insensitive title search. Spec §13.5. */

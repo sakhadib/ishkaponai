@@ -5,6 +5,7 @@
 import type {
   AgentEvent,
   AppInfo,
+  Message,
   ModelCatalogResult,
   SecretStatus,
   Session,
@@ -102,7 +103,17 @@ export interface IshkaponApi {
    * Starts a turn. The returned `messageId` is the **assistant** message being
    * produced — the same id that `turn.started` and subsequent deltas carry.
    */
-  sendMessage(sessionId: string, text: string): Promise<{ messageId: string }>
+  /**
+   * Starts a turn.
+   *
+   * Both rows are written before the turn begins, so both ids are known up
+   * front and returned together. The renderer needs the *user* message's id to
+   * put the message on screen the instant Send is pressed: it used to have no
+   * way to render the question until the turn ended and the transcript was
+   * re-read, which meant a student could not see what they had just asked for
+   * the entire time the model was answering it.
+   */
+  sendMessage(sessionId: string, text: string): Promise<{ userMessage: Message; messageId: string }>
   stopTurn(sessionId: string): Promise<void>
 
   // --- Events ---

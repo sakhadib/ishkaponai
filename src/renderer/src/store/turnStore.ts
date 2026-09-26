@@ -92,7 +92,15 @@ export interface TurnState {
   nextSeq: number
 
   attach: () => () => void
-  send: (sessionId: string, text: string) => Promise<void>
+  /**
+   * Starts a turn and returns the rows main wrote for it.
+   *
+   * Returns the ids rather than swallowing them because the caller has to draw
+   * the question immediately — see `showUserMessage`. Null when the send never
+   * happened, so the caller can skip the optimistic insert instead of drawing a
+   * message that has no row behind it.
+   */
+  send: (sessionId: string, text: string) => Promise<SendResult | null>
   stop: (sessionId: string) => Promise<void>
   reset: () => void
   /** Test seam: apply an event without the timer. */
@@ -100,11 +108,32 @@ export interface TurnState {
   flush: () => void
 }
 
+/**
+ * The turn is over — successfully or not.
+ *
+ * `error` counts. A turn that fails still streamed real content and ran real
+ * calculations, and that content is the only record of what the student asked
+ * and what came back before the failure. Treating only `idle` as terminal meant
+ * a failed turn was never handed over, so the partial answer and its execution
+ * cards were dropped on the floor and the transcript silently rewrote itself to
+ * look as though the question had never been asked.
+ */
+export function isTurnSettled(phase: TurnPhase, streaming: boolean): boolean {
+  return !streaming && (phase === 'idle' || phase === 'error')
+}
+
 interface Pending {
   text: string
   reasoning: string
   /** Tool ids that received output since the last flush. */
   toolOutputs: Map<string, string>
+}
+
+/** What `send` hands back so the caller can draw the question straight away. */
+export interface SendResult {
+  readonly userMessage: Message
+  /** The assistant row this turn is filling. */
+  readonly messageId: string
 }
 
 function emptyPending(): Pending {
@@ -414,7 +443,7 @@ export const useTurnStore = create<TurnState>((set, get) => {
 
     send: async (sessionId, text) => {
       const trimmed = text.trim()
-      if (trimmed === '') return
+      if (trimmed === '') return null
       clearTimers()
       pending = emptyPending()
       set({
@@ -425,16 +454,18 @@ export const useTurnStore = create<TurnState>((set, get) => {
         nextSeq: 0
       })
       try {
-        const { messageId } = await call('Sending the message', (api) =>
+        const result = await call('Sending the message', (api) =>
           api.sendMessage(sessionId, trimmed)
         )
-        set({ messageId })
+        set({ messageId: result.messageId })
+        return { userMessage: result.userMessage, messageId: result.messageId }
       } catch (error) {
         set({
           streaming: false,
           phase: 'error',
           error: error instanceof Error ? error.message : String(error)
         })
+        return null
       }
     },
 
@@ -481,10 +512,21 @@ export function buildCompletedRows(
   reasoning: string,
   cards: ToolCard[],
   usage: TurnUsage | null,
+  /**
+   * Mirrors what main writes to the same row, so the streamed view and the
+   * reloaded transcript agree. An `error` here is not cosmetic: `MessageItem`
+   * reads it to decide whether to say the answer was left unfinished, and
+   * claiming `complete` over a failed turn would state that a partial answer is
+   * a finished one.
+   */
+  status: 'complete' | 'error' | 'cancelled' = 'complete',
   now = Date.now()
 ): CompletedTurnRows {
   const messages: Message[] = []
-  if (messageId !== null && (text !== '' || reasoning !== '')) {
+  // A turn that produced no text at all still has a row, because the empty
+  // message is what the transcript shows in its place — dropping it would make
+  // the question look unanswered rather than failed.
+  if (messageId !== null) {
     messages.push({
       id: messageId,
       sessionId,
@@ -492,7 +534,7 @@ export function buildCompletedRows(
       role: 'assistant',
       content: text,
       reasoning: reasoning === '' ? null : reasoning,
-      status: 'complete',
+      status,
       tokensIn: usage?.tokensIn ?? null,
       tokensOut: usage?.tokensOut ?? null,
       costUsd: usage?.costUsd ?? null,

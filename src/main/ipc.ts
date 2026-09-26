@@ -435,7 +435,10 @@ export function registerIpcHandlers(deps: IpcDependencies): void {
         throw error instanceof UserError ? error : userError(describeError(error))
       }
 
-      return { messageId: assistantMessage.id }
+      // The user row as well as the assistant's id. The renderer draws the
+      // question the moment Send is pressed, rather than waiting for the turn to
+      // end and the transcript to be re-read.
+      return { userMessage, messageId: assistantMessage.id }
     })
   )
 

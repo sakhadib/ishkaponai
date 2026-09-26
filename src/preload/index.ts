@@ -4,6 +4,7 @@ import type { CreateSessionOptions, IshkaponApi, SetApiKeyResult } from '@shared
 import type {
   AgentEvent,
   AppInfo,
+  Message,
   ModelCatalogResult,
   SecretStatus,
   Session,
@@ -47,7 +48,7 @@ const api: IshkaponApi = {
     ipcRenderer.invoke(IpcChannel.SessionUpdate, id, patch),
   deleteSession: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannel.SessionDelete, id),
 
-  sendMessage: (sessionId: string, text: string): Promise<{ messageId: string }> =>
+  sendMessage: (sessionId: string, text: string): Promise<{ userMessage: Message; messageId: string }> =>
     ipcRenderer.invoke(IpcChannel.ChatSend, sessionId, text),
   stopTurn: (sessionId: string): Promise<void> => ipcRenderer.invoke(IpcChannel.ChatStop, sessionId),
 
